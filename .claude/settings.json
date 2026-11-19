@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(vault/**)",
+      "Edit(vault/**)",
+      "Write(vault/**)",
+      "Bash(cat vault/*)",
+      "Bash(grep * vault*)",
+      "Bash(rg * vault*)"
+    ]
+  }
+}

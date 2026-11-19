@@ -104,11 +104,14 @@ The agent finds the 3 decisions that steer the hub. It then follows shared assum
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
 supplier has flagged a slip. Run step 2, ask again, and the budget break shows up.
 
-**Reset** to the seed data at any time:
+**Reset** to the committed vault at any time:
 
 ```bash
-python3 scripts/seed_vault.py
+git checkout -- vault && git clean -fdq vault
 ```
+
+`python3 scripts/seed_vault.py` rebuilds the notes from code. Relate rewrites them into its own
+field order on first open, so expect a one-time diff.
 
 ## Where the data lives
 
