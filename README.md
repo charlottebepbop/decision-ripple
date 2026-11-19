@@ -1,10 +1,10 @@
 # Kestrel decision graph <!-- [C] working title, hers to change -->
 
-<!-- HER WORDS: one-line pitch -->
+A decision log that notices when its assumptions break.
 
 ## Use case
 
-<!-- HER WORDS: the problem, who has it, and why it hurts. 3 to 5 sentences. -->
+Teams write down what they decided, but rarely what each decision assumed. When the budget is cut or a supplier slips, nobody can say which live decisions just lost their footing. The ones that matter get found late, by whoever trips over them. This graph keeps decisions, the assumptions under them, the projects they steer and the people behind them as plain markdown notes. One new signal returns the decisions at risk, how critical each is, and who to tell. AI agents read the same graph before they plan work, so they don't build on a decision someone already replaced.
 
 The sample company is made up: **Kestrel Cargo**, a cargo-bike delivery firm in Rotterdam with
 10 people, 8 projects and 24 decisions. The relationships that matter:
