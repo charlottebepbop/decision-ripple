@@ -231,6 +231,28 @@ that supersedes Q2 is what the pre-check names for both: it walks `SUPERSEDES` (
 hops) and keeps the decision whose status is still `live`. Use `--amends`
 for a change that keeps the old decision live.
 
+`--context`, `--option` (once per option), and `--who-decided` are stored in the note under those headings. Without them the note is still the title and the rationale. `--dry-run` prints the note and writes nothing.
+
+**Draft it in Claude Code instead of writing the note by hand.** A full note takes several minutes to compose, and a mistyped link makes Relate create an empty note that looks connected. `/log-decision` and `/log-signal` (the files in `.claude/commands/`) draft from the conversation, or from a memo you paste after the command. They run `python3 scripts/list_slugs.py` and link only to slugs that list prints. A person or an assumption that is not in the list is shown as new and created only after you say yes, with `--new-person` or `--new-assumption`. The commands then run the scripts above, run `python3 scripts/check_vault.py`, and print any problem. `/log-signal` prints the brief. If that memo also states a decision, it suggests `/log-decision` and leaves that decision unwritten.
+
+```bash
+python3 scripts/add_decision.py "Open the Rotterdam South hub in Q2" \
+  --date 2026-12-01 \
+  --project hub-2-rotterdam-south --by olu-adeyemi --by tomasz-wilk \
+  --rests-on south-hub-lease-signed:critical --rests-on series-a-close-march \
+  --rests-on q2-fit-out-fits \
+  --new-assumption q2-fit-out-fits "The Q2 fit-out fits the revised budget." \
+  --supersedes 2026-07-29-open-south-hub-q1 \
+  --rationale "The Q1 budget was cut by 20%." \
+  --context "The north hub still runs at 92% capacity." \
+  --option "Open in Q2." \
+  --option "Cancel the hub. Lost because the north hub stays full." \
+  --who-decided "Olu Adeyemi and Tomasz Wilk decided." \
+  --dry-run
+```
+
+Drop `--dry-run` only when the printed note is the one you want. Set `DECISION_VAULT` first when this is not the Kestrel sample.
+
 **4. Let an agent use it.** `.mcp.json` runs `scripts/serve.sh`. The script builds the full-text index, then starts Relate's MCP server, read-only and live. With `DECISION_VAULT` set, the server reads that folder. With the variable unset, the server reads the sample `vault/`. The server offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent which query to run, and to use slugs. With Claude Code:
 
 ```bash

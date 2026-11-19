@@ -18,8 +18,9 @@ Rules for agents:
 - The notes folder is `DECISION_VAULT` when that variable is set, otherwise `vault/` in this repo. Briefs go to `DECISION_BRIEFS` when set, otherwise `briefs/`. Record into the sample vault only when the user is working the Kestrel example. `scripts/serve.sh` reads the same variable.
 - Before you plan or change work on a project, run `6-exposed` and the precheck for it. Name any superseded decision and any assumption under pressure. The precheck follows SUPERSEDES to the decision that is still live.
 - Never act on a superseded decision. Follow SUPERSEDES to the live one.
-- To record new information, run `scripts/add_signal.py`. Always pass the real `--source`. Repeat `--and ASSUMPTION EFFECT` when one memo hits more than one assumption.
-- To record a new decision, or one that replaces or amends another, run `scripts/add_decision.py`.
-  Only record a decision the user says was made, with who made it.
-- Do not write vault files by hand.
+- To record new information, follow `.claude/commands/log-signal.md` (`/log-signal`). It runs `scripts/add_signal.py`. Always pass the real `--source`. Repeat `--and ASSUMPTION EFFECT` when one memo hits more than one assumption. After the brief, suggest `/log-decision` when the memo also states a decision, and leave that decision unwritten.
+- To record a new decision, or one that replaces or amends another, follow `.claude/commands/log-decision.md` (`/log-decision`). It runs `scripts/add_decision.py`.
+  Only record a decision the user says was made, with who made it. Show the draft and wait for a yes before the script writes. Pass `--context`, `--option`, and `--who-decided` when the user supplied them, so the note keeps that reasoning.
+- Link only to slugs `scripts/list_slugs.py` prints. A decision line shows `[live]` or `[superseded]`. A missing assumption or person is proposed as new and created only with `--new-assumption` or `--new-person` after the user agrees. A close slug is a typo, not a new note. Do not invent a project.
+- Do not write vault files by hand. After a script writes, run `scripts/check_vault.py` and report what it prints.
 - Answer with decision titles and person names from the graph, not guesses.
