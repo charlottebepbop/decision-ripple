@@ -43,4 +43,6 @@ jobs:
           relate --version
           relate --version | grep -q "1\.1\.0"
       - name: Scenario tests
-        run: python3 -m unittest discover -s tests -p 'test_scenarios.py' -v
+        run: |
+          python3 -m unittest discover -s tests -p 'test_scenarios.py' -v
+          python3 -m unittest discover -s tests -p 'test_weekly.py' -v

@@ -261,7 +261,7 @@ claude
 > Why did we drop the annual mapping contract?
 ```
 
-The agent runs `6-exposed` before it plans. On a fresh clone that is the scan-coverage break
+`/weekly` (`.claude/commands/weekly.md`) runs `scripts/weekly.py` and prints the briefing for the week. The agent runs `6-exposed` before it plans. On a fresh clone that is the scan-coverage break
 under the route optimizer and the ops dashboard, and the supplier slip under the bike lease.
 It finds the 3 decisions that steer the hub, then follows shared assumptions to
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
@@ -276,6 +276,28 @@ git checkout -- vault && git clean -fdq vault
 
 `python3 scripts/seed_vault.py` deletes `vault/` and writes the sample notes again. It leaves a `DECISION_VAULT` folder alone. Opening the vault leaves the notes as they are. Relate keeps its index in `vault/.cypherlite/`, and that folder is gitignored, so the first query does not change the files git tracks.
 
+## Weekly briefing
+
+`python3 scripts/weekly.py` prints a short briefing and writes `weekly-<date>.md` to `DECISION_BRIEFS` (or to `briefs/` when that is unset). It reads `DECISION_VAULT` the same way the queries do. It does not change the notes.
+
+The window is the 7 days before today, through today. `--as-of YYYY-MM-DD` sets the last day, which matters when you want a past week. `--since YYYY-MM-DD` sets the first day. Both days are included. `--review-after 90` is how long an assumption can go without a signal before it is worth a review. Assumptions have no review date. The latest signal is the review, and a signal dated after `--as-of` does not count.
+
+```bash
+python3 scripts/weekly.py --since 2026-12-05 --as-of 2026-12-12
+```
+
+Five sections:
+
+- What broke or weakened in the window.
+- The live decisions now at risk, grouped by the assumption that was hit, critical first. A high-confidence decision is included. A superseded decision is not.
+- Who to tell, most exposed first. A decision that is critical under two assumptions hit in the window counts once.
+- What was confirmed or supported. When that assumption was also broken or weakened, the break is on the same line, including a break from before the window.
+- Assumptions with no signal in the review window, under Worth a review.
+
+In Claude Code, `/weekly` runs the same script. Words after the command become `--since`, `--as-of`, or `--review-after`.
+
+The six queries above are unchanged. `6-exposed` is still every break and weaken on the books, with no date and no confirms. `2-fragile` still counts only low-confidence decisions. The briefing is the weekly read. It uses `queries/7-window.cypher` through `queries/11-evidence.cypher`.
+
 ## Start your own vault
 
 `vault/` is the Kestrel Cargo sample, and it is committed. `add_signal.py` and `add_decision.py` write there until you point them at a folder of your own. Create one outside the repo:
@@ -286,7 +308,7 @@ export DECISION_VAULT="$HOME/notes/my-decisions"
 export DECISION_BRIEFS="$HOME/notes/my-decisions-briefs"
 ```
 
-`DECISION_VAULT` is the notes folder. The queries above, `list_slugs.py`, `add_signal.py`, `add_decision.py`, `check_vault.py`, and `scripts/serve.sh` all use it. `DECISION_BRIEFS` is where the "who to tell" brief is written. Leave it unset and the brief lands in this repo's `briefs/` folder.
+`DECISION_VAULT` is the notes folder. The queries above, `list_slugs.py`, `add_signal.py`, `add_decision.py`, `weekly.py`, `check_vault.py`, and `scripts/serve.sh` all use it. `DECISION_BRIEFS` is where a signal's "who to tell" brief is written, and where `weekly.py` writes `weekly-<date>.md`. Leave it unset and the brief lands in this repo's `briefs/` folder.
 
 Then add notes in this order, so every link has a file to point at:
 
@@ -326,7 +348,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/check_vault.py
 ```
 
-The scenario tests copy `vault/` and set `DECISION_VAULT`, so the committed notes stay as they are. Each one says which decisions, people, and projects a signal should flag, and which it should leave alone.
+The scenario tests copy `vault/` and set `DECISION_VAULT`, so the committed notes stay as they are. Each one says which decisions, people, and projects a signal should flag, and which it should leave alone. `tests/test_weekly.py` does the same for the briefing: the date window, a high-confidence break, a support shown next to a break, a decision counted once when it is critical under two assumptions, and assumptions with no recent signal.
 
 `scripts/check_vault.py` reads the notes as files. Run it after you edit a note by hand. It exits with an error when a link is broken, mistyped, or would be dropped, when a link would make Relate create an empty note, when a note only has type and name, when a header field is missing or malformed (including a decision with no `status`, which then disappears from the ripple), when `name` does not match the filename (Relate then refuses every query), when a person or a note is duplicated, when no decision rests on an assumption, or when a decision rests on no assumption. The message says what to change. With no argument it checks `DECISION_VAULT` when that is set, and `vault/` otherwise. Pass a folder to check that folder instead.
 
