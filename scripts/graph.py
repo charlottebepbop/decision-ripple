@@ -1,13 +1,14 @@
 """Run Cypher against vault/ through the Relate CLI."""
 
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VAULT = ROOT / "vault"
+VAULT = Path(os.environ["DECISION_VAULT"]) if os.environ.get("DECISION_VAULT") else ROOT / "vault"
 QUERIES = ROOT / "queries"
 
 
