@@ -29,7 +29,7 @@ finds them. A flat list of notes cannot.
     a new note appears in `vault/Signal/`.
   - A directory store lets one process write while the MCP server follows along
     (`--read-only=live`). A single `.rl` file refuses live mode.
-- **What the graph models:** 59 nodes and 141 relationships.
+- **What the graph models:** 59 nodes and 142 relationships.
 
 | Label | Count | Example |
 |---|---|---|
@@ -98,7 +98,7 @@ python3 scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget
 ```
 
 This writes `vault/Signal/<date>-finance-cuts-the-q1-budget-by-20.md` and a brief in
-`briefs/`: 5 live decisions at risk (3 critical) and 7 people to tell, most exposed first.
+`briefs/`: 5 live decisions at risk (3 critical) and 8 people to tell, most exposed first.
 `examples/briefs/` holds three briefs made this way on a fresh clone, so you can read the
 output without running anything.
 Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.

@@ -9,7 +9,7 @@ DECIDED_BY:
   - "[[Person/ruth-mensah]]"
   - "[[Person/tomasz-wilk]]"
 RESTS_ON:
-  - target: "[[Assumption/cs-headcount-flat]]"
+  - target: "[[Assumption/cs-tickets-low]]"
     weight: critical
   - "[[Assumption/enterprise-demand-3-pilots]]"
 STEERS:

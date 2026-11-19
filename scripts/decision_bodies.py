@@ -485,7 +485,7 @@ The dashboard is built on delivery scans. If scan coverage drops well below 95%,
 **Rationale:** Protects runway if the round slips.
 
 ## Context
-The runway plan assumes the Series A closes in March. If it slips, every new salary shortens runway. Operations hires keep going, because the south hub and Lyon need drivers.
+The runway plan assumes the Series A closes in March. If it slips, every new salary shortens runway. Operations hires keep going, because the south hub and Lyon need drivers. The freeze pauses a sixth Customer Success hire and an enterprise sales role.
 
 ## Options considered
 - Freeze all hiring outside Operations until the round closes.

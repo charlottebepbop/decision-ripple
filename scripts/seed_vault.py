@@ -47,7 +47,7 @@ ASSUMPTIONS = {
     "enterprise-demand-3-pilots": "At least 3 enterprise pilots convert by end of Q1.",
     "winter-volume-dip-15": "Winter parcel volume drops by at most 15%.",
     "series-a-close-march": "The Series A closes by end of March.",
-    "cs-headcount-flat": "Customer Success stays at 5 people.",
+    "cs-tickets-low": "Support tickets per customer stay at or below 1.4 a month.",
     "eu-cargo-bike-subsidy": "The Dutch e-cargo-bike subsidy renews for 2027.",
     "ops-data-complete": "Delivery scans cover at least 95% of trips.",
     "hiring-pipeline-40": "We get 40 qualified driver applicants a month.",
@@ -87,7 +87,7 @@ DECISIONS = {
         rationale="Covers 30% of the purchase price."),
     "2026-07-15-cs-stays-at-five": dict(
         title="Customer Success stays at 5 people", confidence="medium",
-        rests_on=[("cs-headcount-flat", C), ("enterprise-demand-3-pilots", S)],
+        rests_on=[("cs-tickets-low", C), ("enterprise-demand-3-pilots", S)],
         steers=["customer-sla-program"], by=["ruth-mensah", "tomasz-wilk"],
         rationale="Ticket volume per customer is falling."),
     "2026-07-29-open-south-hub-q1": dict(
@@ -175,7 +175,7 @@ DECISIONS = {
     "2026-11-12-freeze-hires-outside-ops": dict(
         title="Freeze hiring outside Operations until the Series A closes", confidence="medium",
         rests_on=[("series-a-close-march", C), ("q1-budget-holds", S)],
-        steers=["driver-hiring-q1"], by=["ines-varga"],
+        steers=["customer-sla-program", "enterprise-pricing"], by=["ines-varga"],
         rationale="Protects runway if the round slips."),
 }
 

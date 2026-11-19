@@ -12,7 +12,8 @@ RESTS_ON:
   - target: "[[Assumption/series-a-close-march]]"
     weight: critical
 STEERS:
-  - "[[Project/driver-hiring-q1]]"
+  - "[[Project/customer-sla-program]]"
+  - "[[Project/enterprise-pricing]]"
 ---
 
 # Freeze hiring outside Operations until the Series A closes
@@ -20,7 +21,7 @@ STEERS:
 **Rationale:** Protects runway if the round slips.
 
 ## Context
-The runway plan assumes the Series A closes in March. If it slips, every new salary shortens runway. Operations hires keep going, because the south hub and Lyon need drivers.
+The runway plan assumes the Series A closes in March. If it slips, every new salary shortens runway. Operations hires keep going, because the south hub and Lyon need drivers. The freeze pauses a sixth Customer Success hire and an enterprise sales role.
 
 ## Options considered
 - Freeze all hiring outside Operations until the round closes.
