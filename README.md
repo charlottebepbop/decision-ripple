@@ -176,6 +176,21 @@ git checkout -- vault && git clean -fdq vault
 `python3 scripts/seed_vault.py` rebuilds the notes from code. Relate rewrites them into its own
 field order on first open, so expect a one-time diff.
 
+## Tests and the vault check
+
+Python 3 only, from the standard library. No packages to install. The scenario tests need the Relate CLI (v1.1.0). The vault check does not.
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/check_vault.py
+```
+
+The scenario tests copy `vault/` and set `DECISION_VAULT`, so the committed notes stay as they are. Each one says which decisions, people, and projects a signal should flag, and which it should leave alone.
+
+`scripts/check_vault.py` reads the notes as files. It exits with an error when a link is broken, mistyped, or would be dropped, when a link would make Relate create an empty note, when a note only has type and name, when a header field is missing or malformed (including a decision with no `status`, which then disappears from the ripple), when `name` does not match the filename (Relate then refuses every query), when a person or a note is duplicated, when no decision rests on an assumption, or when a decision rests on no assumption. The message says what to change. Pass another folder to check that instead of `vault/`.
+
+`scripts/add_signal.py` refuses an empty assumption (the note Relate creates from a mistyped link) and names the closest real one.
+
 ## Where the data lives
 
 `vault/` is the persistent store. One markdown file per node, one folder per label.

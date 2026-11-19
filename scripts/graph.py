@@ -8,8 +8,27 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VAULT = Path(os.environ["DECISION_VAULT"]) if os.environ.get("DECISION_VAULT") else ROOT / "vault"
 QUERIES = ROOT / "queries"
+
+
+def vault_path():
+    # Read on each call. A test points DECISION_VAULT at a throwaway copy after import.
+    raw = os.environ.get("DECISION_VAULT")
+    return Path(raw) if raw else ROOT / "vault"
+
+
+class _Vault:
+    def __fspath__(self):
+        return str(vault_path())
+
+    def __str__(self):
+        return str(vault_path())
+
+    def __truediv__(self, other):
+        return vault_path() / other
+
+
+VAULT = _Vault()
 
 
 def cypher(statement, **params):

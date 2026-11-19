@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The vault check is plain Python. Scenario tests also need the Relate CLI.
+# They are separate jobs so a Relate install failure still runs the vault check.
+jobs:
+  vault:
+    name: Vault check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Vault check and its tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_check_vault.py' -v
+          python3 scripts/check_vault.py
+
+  scenarios:
+    name: Scenario tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Relate CLI
+        run: |
+          if ! command -v ssh-keygen >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y openssh-client
+          fi
+          curl -fsSL https://relatedb.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Relate is v1.1.0
+        run: |
+          relate --version
+          relate --version | grep -q "1\.1\.0"
+      - name: Scenario tests
+        run: python3 -m unittest discover -s tests -p 'test_scenarios.py' -v
