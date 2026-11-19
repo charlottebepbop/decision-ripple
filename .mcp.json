@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "kestrel-decisions": {
-      "command": "relate",
-      "args": ["serve", "--mcp", "stdio", "--database", "vault",
-               "--snapshot-format", "markdown", "--read-only=live"]
+      "command": "sh",
+      "args": ["scripts/serve.sh"]
     }
   }
 }

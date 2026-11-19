@@ -22,3 +22,19 @@ STEERS:
 # The enterprise tier includes the SLA
 
 **Rationale:** Two of three pilots made the SLA a condition.
+
+## Context
+This amends "Price the enterprise tier at EUR 1,800 a month". The price stays. The 98% on-time SLA is now part of the tier, not an add-on.
+
+## Options considered
+- Include the SLA in the EUR 1,800 tier.
+- Sell the SLA as a paid add-on. Lost because two pilot customers would walk.
+- Raise the price to cover SLA risk. Lost because it exceeds the named budgets.
+
+## Who argued what
+- Hanna Berg (Head of Growth) wants the SLA bundled to close the pilots.
+- Ruth Mensah (Customer Success Lead) will report SLA results to each account.
+- Priya Raman (Head of Finance) asked for the penalty cap in every contract.
+
+## What would change our mind
+If penalties are not capped at 5% of contract value, bundling is too risky. If fewer than 3 pilots convert, we revisit the whole tier.

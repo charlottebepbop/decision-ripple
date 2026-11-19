@@ -8,6 +8,8 @@ folder = label, filename = key, frontmatter wikilink lists = relationships.
 from pathlib import Path
 import shutil
 
+from decision_bodies import BODIES
+
 ROOT = Path(__file__).resolve().parent.parent / "vault"
 
 PEOPLE = {
@@ -242,7 +244,7 @@ def main():
         fm += link_list("DECIDED_BY", "Person", d["by"])
         fm += link_list("SUPERSEDES", "Decision", d.get("supersedes"))
         fm += link_list("AMENDS", "Decision", d.get("amends"))
-        write("Decision", slug, fm, f"# {d['title']}\n\n**Rationale:** {d['rationale']}")
+        write("Decision", slug, fm, BODIES[slug])
 
     for slug, s in SIGNALS.items():
         fm = ["type: Signal", f"name: {slug}", f'title: "{s["title"]}"',

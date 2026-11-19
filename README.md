@@ -67,10 +67,18 @@ git clone https://github.com/charlottebepbop/decision-ripple.git
 cd decision-ripple
 ```
 
-**1. Ask the graph.** Four queries in `queries/`, each run against the vault:
+**1. Ask the graph.** First build the full-text index once. It maps note bodies to the `text`
+property and indexes decision titles and bodies:
 
 ```bash
 cd vault
+relate query --snapshot-format markdown --markdown-body-properties text --database . \
+  < ../queries/0-setup.cypher
+```
+
+Then run any of the five queries in `queries/`:
+
+```bash
 relate query --snapshot-format markdown --database . --mode table \
   --param assumption=q1-budget-holds < ../queries/1-ripple.cypher
 ```
@@ -81,6 +89,7 @@ relate query --snapshot-format markdown --database . --mode table \
 | `2-fragile.cypher` | Which projects stand on 2 or more low-confidence decisions, and is any of the ground already hit? | none |
 | `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what is under pressure? | `project` |
 | `4-tell.cypher` | The ripple, turned around per person, most exposed first | `assumption` |
+| `5-why.cypher` | Why did we decide this? Full-text `SEARCH` over decision notes, then who decided, what it rests on, what replaced it | `term` |
 
 **2. Record a new signal.** From the repo root:
 
@@ -90,6 +99,8 @@ python3 scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget
 
 This writes `vault/Signal/<date>-finance-cuts-the-q1-budget-by-20.md` and a brief in
 `briefs/`: 5 live decisions at risk (3 critical) and 7 people to tell, most exposed first.
+`examples/briefs/` holds three briefs made this way on a fresh clone, so you can read the
+output without running anything.
 Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.
 
 **3. Record the decision that follows.** The hub's Q1 opening lost its budget, so it moves to Q2:
@@ -105,13 +116,14 @@ This writes a new note in `vault/Decision/`, links it with `SUPERSEDES`, and set
 decision to `superseded`. The pre-check it prints now points from Q1 to Q2. Use `--amends`
 for a change that keeps the old decision live.
 
-**4. Let an agent use it.** `.mcp.json` starts Relate's MCP server on the vault, read-only and
-live. It offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent to run
+**4. Let an agent use it.** `.mcp.json` runs `scripts/serve.sh`. It builds the full-text index,
+then starts Relate's MCP server on the vault, read-only and live. It offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent to run
 the pre-check before it plans work on a project. With Claude Code:
 
 ```bash
 claude
 > I want to speed up the Rotterdam South hub. Anything I should know first?
+> Why did we drop the annual mapping contract?
 ```
 
 The agent finds the 3 decisions that steer the hub. It then follows shared assumptions to
@@ -132,7 +144,9 @@ field order on first open, so expect a one-time diff.
 
 `vault/` is the persistent store. One markdown file per node, one folder per label.
 `vault/.cypherlite/` holds Relate's derived state and is not committed. Relate rebuilds it from
-the notes on first open. `scripts/seed_vault.py` generates the notes, so the data can be
+the notes on first open. That includes the full-text index, which `queries/0-setup.cypher` (or
+`scripts/serve.sh`) recreates. Note bodies are the `text` property of each node.
+`scripts/seed_vault.py` generates the notes, so the data can be
 rebuilt from code.
 
 ## Notes on Relate

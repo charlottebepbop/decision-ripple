@@ -20,3 +20,18 @@ STEERS:
 # Staff the south hub with drivers from the north hub
 
 **Rationale:** Experienced drivers lower the error rate in a new hub.
+
+## Context
+New drivers make about 3 times more delivery errors in their first month. A new hub with only new drivers would start with a high error rate. We plan to move 12 experienced drivers south and backfill the north hub.
+
+## Options considered
+- Move experienced north hub drivers south, and hire new drivers for the north.
+- Staff the south hub with new hires only. Lost because errors would land on new customers.
+
+## Who argued what
+- Olu Adeyemi (Head of Operations) wants the transfer.
+- Saskia de Wit (People Lead) owns the backfill hiring.
+- Tomasz Wilk (COO) asked that no driver moves without agreeing to it.
+
+## What would change our mind
+This needs driver churn under 8% and 40 qualified applicants a month. Otherwise the backfill fails.

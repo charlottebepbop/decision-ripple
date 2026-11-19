@@ -1,0 +1,21 @@
+# Lyon permit office asks for a second fire inspection
+
+Signal `2026-12-03-lyon-permit-office-asks-for-a-second-fire-inspection` (Email from the permit office, 2026-12-03) **WEAKENS** the assumption:
+> Lyon grants the cargo-bike depot permit by 15 Jan.
+
+## 4 live decisions rest on it, 2 of them critically
+
+| Decision | Weight | Confidence | Projects |
+|---|---|---|---|
+| Launch Lyon before Paris | critical | high | lyon-launch |
+| Put the Lyon depot in Guillotiere | critical | medium | lyon-launch |
+| Hire the Lyon city lead in December | supporting | medium | lyon-launch, driver-hiring-q1 |
+| Paris waits for 3 months of Lyon data | supporting | high | lyon-launch |
+
+## Tell 5 people, most exposed first
+
+- **hanna-berg** (Head of Growth): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **ines-varga** (CEO): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **olu-adeyemi** (Head of Operations): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **priya-raman** (Head of Finance): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **saskia-de-wit** (People Lead): Hire the Lyon city lead in December

@@ -62,7 +62,7 @@ def main():
             lines.append(f"| {r['decision']} | {r['weight']} | {r['confidence']} | {', '.join(r['projects'])} |")
         lines += ["", f"## Tell {len(tell)} people, most exposed first", ""]
         for t in tell:
-            lines.append(f"- **{t['person']}** ({t['role']}): {'; '.join(t['decisions'])}")
+            lines.append(f"- **{t['person']}** ({t['role']}, {t['critical']} critical): {'; '.join(t['decisions'])}")
     lines.append("")
 
     BRIEFS.mkdir(exist_ok=True)

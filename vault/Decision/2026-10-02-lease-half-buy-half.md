@@ -23,3 +23,19 @@ SUPERSEDES:
 # Lease half the e-cargo bikes, buy half
 
 **Rationale:** Keeps cash for the south hub.
+
+## Context
+This replaces "Buy the e-cargo bikes outright". Buying all 60 would take most of the fleet budget in one quarter. The south hub fit-out lands in the same quarter.
+
+## Options considered
+- Lease 30 e-cargo bikes and buy 30.
+- Keep the plan to buy all 60. Lost because it leaves too little cash for the south hub.
+- Lease all 60. Lost because the 30% subsidy only applies to bikes we buy.
+
+## Who argued what
+- Priya Raman (Head of Finance) proposed the split to protect cash.
+- Diego Morales (Fleet Lead) wants the owned bikes on the longest routes.
+- Tomasz Wilk (COO) signed off on timing with the south hub.
+
+## What would change our mind
+The supplier must deliver all 60 bikes by end of February. A late delivery, a Q1 budget cut or no subsidy renewal would reopen the split.
