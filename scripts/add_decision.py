@@ -12,7 +12,14 @@ The decision becomes a note in vault/Decision/. A superseded decision gets statu
 import argparse
 import datetime as dt
 
-from graph import cypher, query, require, slug
+from graph import ROOT, VAULT, cypher, query, require, slug
+
+
+def show(path):
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
 
 
 def main():
@@ -73,11 +80,12 @@ def main():
         cypher("MATCH (d:Decision {name: $d}), (o:Decision {name: $o}) MERGE (d)-[:AMENDS]->(o)",
                d=name, o=args.amends)
 
-    print(f"Decision note: vault/Decision/{name}.md")
+    print(f"Decision note: {show(VAULT / 'Decision' / f'{name}.md')}")
     for p in args.project:
         print(f"\nPrecheck for {p}:")
         for row in query("3-precheck", project=p):
-            extra = f" (replaced by: {row['replaced_by']})" if row["replaced_by"] else ""
+            replaced = [t for t in (row["replaced_by"] or []) if t]
+            extra = f" (replaced by: {'; '.join(replaced)})" if replaced else ""
             pressure = f" | pressure: {'; '.join(row['pressure'])}" if row["pressure"] else ""
             print(f"- [{row['status']}] {row['decision']}{extra}{pressure}")
 
