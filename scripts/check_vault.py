@@ -3,6 +3,8 @@
     python3 scripts/check_vault.py
     python3 scripts/check_vault.py path/to/vault
 
+With no path, DECISION_VAULT is checked when that variable is set.
+
 Prints a plain-language fix for each problem and exits non-zero when any are found.
 Python 3 only. No third-party packages.
 
@@ -14,6 +16,7 @@ is reported or counted and never skipped. Relate drops some of those forms silen
 import argparse
 import datetime as dt
 import difflib
+import os
 import re
 import sys
 from pathlib import Path
@@ -674,9 +677,17 @@ def render(report, root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("vault", nargs="?", help="notes folder (default: vault/ next to scripts/)")
+    parser.add_argument(
+        "vault", nargs="?",
+        help="notes folder (default: DECISION_VAULT, or vault/ next to scripts/)",
+    )
     args = parser.parse_args()
-    root = Path(args.vault) if args.vault else Path(__file__).resolve().parent.parent / "vault"
+    if args.vault:
+        root = Path(args.vault)
+    elif os.environ.get("DECISION_VAULT"):
+        root = Path(os.environ["DECISION_VAULT"])
+    else:
+        root = Path(__file__).resolve().parent.parent / "vault"
     report = check_vault(root)
     print(render(report, root))
     sys.exit(0 if report.ok else 1)

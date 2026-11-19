@@ -8,8 +8,9 @@
         --and ebike-supplier-delivers-feb WEAKENS \
         --source "Board memo" --date 2026-12-04
 
-The signal becomes one note in vault/Signal/. Repeat --and for each extra assumption.
-The brief lands in briefs/.
+The signal becomes one note under Signal/ in DECISION_VAULT, or in vault/ when that
+variable is unset. Repeat --and for each extra assumption. The brief lands in
+DECISION_BRIEFS, or in briefs/. Pass the assumption slug from list_slugs.py, not the title.
 """
 
 import argparse

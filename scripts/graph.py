@@ -59,4 +59,6 @@ def require(label, name):
 
 
 def slug(text):
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+    # Cut at 60 characters, then drop a hyphen the cut left on the end.
+    cut = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+    return cut.strip("-")

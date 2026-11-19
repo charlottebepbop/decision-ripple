@@ -19,6 +19,7 @@ jobs:
       - name: Vault check and its tests
         run: |
           python3 -m unittest discover -s tests -p 'test_check_vault.py' -v
+          python3 -m unittest discover -s tests -p 'test_personal_vault.py' -v
           python3 scripts/check_vault.py
 
   scenarios:

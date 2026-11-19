@@ -6,7 +6,9 @@
         --supersedes 2026-07-29-open-south-hub-q1 \
         --rationale "The Q1 budget was cut by 20%." --confidence medium
 
-The decision becomes a note in vault/Decision/. A superseded decision gets status superseded.
+The decision becomes a note under Decision/ in DECISION_VAULT, or in vault/ when that
+variable is unset. A superseded decision gets status superseded. Pass slugs from
+list_slugs.py, not titles. The filename slug is cut at 60 characters.
 """
 
 import argparse
