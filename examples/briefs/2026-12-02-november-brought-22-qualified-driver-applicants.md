@@ -12,7 +12,7 @@ Signal `2026-12-02-november-brought-22-qualified-driver-applicants` (Recruiting 
 
 ## Tell 4 people, most exposed first
 
-- **olu-adeyemi** (Head of Operations): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
-- **priya-raman** (Head of Finance): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
-- **saskia-de-wit** (People Lead): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
-- **tomasz-wilk** (COO): Staff the south hub with drivers from the north hub
+- **olu-adeyemi** (Head of Operations, 1 critical): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
+- **priya-raman** (Head of Finance, 1 critical): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
+- **saskia-de-wit** (People Lead, 1 critical): Hire 25 drivers in Q1; Staff the south hub with drivers from the north hub
+- **tomasz-wilk** (COO, 0 critical): Staff the south hub with drivers from the north hub
