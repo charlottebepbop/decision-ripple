@@ -1,0 +1,6 @@
+.venv/
+vault/.cypherlite/
+__pycache__/
+briefs/*
+!briefs/.gitkeep
+vault/.cypherlite.*
