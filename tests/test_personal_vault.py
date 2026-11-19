@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from add_decision import decision_body
 from graph import slug
 
 
@@ -130,6 +131,16 @@ class ListSlugsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("ops-data-complete", result.stdout)
         self.assertIn("q1-budget-holds", result.stdout)
+        self.assertTrue(result.stdout.startswith("Vault:"))
+
+    def test_decision_lines_name_live_and_superseded(self):
+        result = self.run_list("decision")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        buy = lines.index("  2026-06-20-buy-ebikes-not-lease")
+        self.assertIn("[superseded]", lines[buy + 1])
+        hub = lines.index("  2026-07-29-open-south-hub-q1")
+        self.assertIn("[live]", lines[hub + 1])
 
     def test_unknown_type_fails(self):
         result = self.run_list("customer")
@@ -207,6 +218,55 @@ class CheckVaultEnvTests(unittest.TestCase):
             self.assertIn("Decision/paint-the-door.md", override.stdout)
             self.assertNotIn(str(empty), override.stdout)
             self.assertNotIn("looks consistent", override.stdout)
+
+
+class DecisionBodyTests(unittest.TestCase):
+    def test_optional_sections_are_kept_and_the_body_does_not_end_in_a_newline(self):
+        text = decision_body(
+            "Open the Rotterdam South hub in Q2",
+            "The Q1 budget was cut by 20%.\n",
+            context=" The north hub still runs at 92% capacity. ",
+            options=["Open in Q2.", "- Cancel the hub. Lost because the north hub stays full."],
+            who_decided="Olu Adeyemi and Tomasz Wilk decided.",
+        )
+        self.assertFalse(text.endswith("\n"))
+        self.assertIn("**Rationale:** The Q1 budget was cut by 20%.", text)
+        self.assertIn("## Context\nThe north hub still runs at 92% capacity.", text)
+        self.assertIn("## Options considered\n- Open in Q2.\n- Cancel the hub. Lost because the north hub stays full.", text)
+        self.assertIn("## Who decided\nOlu Adeyemi and Tomasz Wilk decided.", text)
+
+    def test_title_and_rationale_stay_when_the_other_sections_are_absent(self):
+        self.assertEqual(
+            decision_body("Paint the door", "It was peeling."),
+            "# Paint the door\n\n**Rationale:** It was peeling.",
+        )
+
+
+class NewNoteFlagTests(unittest.TestCase):
+    def test_a_bad_new_assumption_slug_is_refused_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault = Path(tmp) / "notes"
+            vault.mkdir()
+            env = os.environ.copy()
+            env["DECISION_VAULT"] = str(vault)
+            result = subprocess.run(
+                [
+                    sys.executable, str(ROOT / "scripts" / "add_decision.py"),
+                    "Open a hub",
+                    "--project", "hub",
+                    "--by", "ada",
+                    "--rationale", "Because.",
+                    "--new-assumption", "Q1 Budget", "The budget holds.",
+                    "--rests-on", "Q1 Budget",
+                ],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("lowercase", result.stderr)
+            self.assertEqual(list(vault.iterdir()), [])
 
 
 def sh_quote(path):

@@ -11,6 +11,7 @@
 The signal becomes one note under Signal/ in DECISION_VAULT, or in vault/ when that
 variable is unset. Repeat --and for each extra assumption. The brief lands in
 DECISION_BRIEFS, or in briefs/. Pass the assumption slug from list_slugs.py, not the title.
+--dry-run checks those slugs and writes neither the note nor the brief.
 """
 
 import argparse
@@ -106,6 +107,7 @@ def main():
                     help="another assumption this signal hits, and its effect (repeat)")
     ap.add_argument("--source", required=True, help="where it came from: a report, memo or notice")
     ap.add_argument("--date", default=dt.date.today().isoformat())
+    ap.add_argument("--dry-run", action="store_true", help="Check the assumptions and write nothing")
     args = ap.parse_args()
 
     hits = [(args.assumption, args.effect)]
@@ -122,6 +124,18 @@ def main():
         statements[assumption] = assumption_statement(assumption)
 
     name = f"{args.date}-{slug(args.title)}"
+    if args.dry_run:
+        print(f"Vault: {VAULT}")
+        print("Dry run. Nothing written.")
+        print()
+        print(f"Signal file: Signal/{name}.md")
+        print(f"Title: {args.title}")
+        print(f"Date: {args.date}")
+        print(f"Source: {args.source}")
+        for assumption, effect in hits:
+            print(f"{effect} {assumption}: {statements[assumption]}")
+        return
+
     # The relationship type cannot be a parameter, so it is checked against EFFECTS above.
     cypher(
         "MERGE (s:Signal {name: $name}) "

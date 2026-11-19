@@ -5,6 +5,7 @@ Assertions are on query rows (and, where a sample brief exists, on that brief).
 """
 
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -690,6 +691,149 @@ class ScenarioTests(unittest.TestCase):
         self.assertIn("2026-12-18-paint-without-status.md", text)
         self.assertIn("missing status", text)
         self.assertIn("disappears from all three", text)
+
+
+    def test_logged_decision_keeps_the_reasoning_and_names_new_notes(self):
+        """Context, options, and who decided are stored, and a new assumption or person is created only when named.
+
+        A dry run writes nothing. The Q1 hub decision points at the Q2 note. The new assumption is supporting.
+        """
+        title = "Open the Rotterdam South hub in Q2"
+        cmd = [
+            sys.executable, "scripts/add_decision.py", title,
+            "--date", "2026-12-01",
+            "--project", "hub-2-rotterdam-south",
+            "--by", "olu-adeyemi", "--by", "tomasz-wilk", "--by", "mina-kowalski",
+            "--rests-on", "south-hub-lease-signed:critical",
+            "--rests-on", "series-a-close-march",
+            "--rests-on", "q2-fit-out-fits",
+            "--new-assumption", "q2-fit-out-fits", "The Q2 fit-out fits the revised budget.",
+            "--new-person", "mina-kowalski", "Mina Kowalski", "Hub planner",
+            "--supersedes", "2026-07-29-open-south-hub-q1",
+            "--rationale", "The Q1 budget was cut by 20%.",
+            "--context", "The north hub still runs at 92% capacity. The revised Q2 envelope covers the fit-out.",
+            "--option", "Open in Q2.",
+            "--option", "Cancel the hub. Lost because the north hub stays full.",
+            "--who-decided", 'Olu Adeyemi and Tomasz Wilk decided. Mina Kowalski said "Q2".',
+        ]
+        note = self.box.vault / "Decision" / "2026-12-01-open-the-rotterdam-south-hub-in-q2.md"
+        person = self.box.vault / "Person" / "mina-kowalski.md"
+        assumption = self.box.vault / "Assumption" / "q2-fit-out-fits.md"
+        preview = subprocess.run(cmd + ["--dry-run"], cwd=ROOT, env=self.box.env, text=True, capture_output=True)
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        self.assertIn("Dry run. Nothing written.", preview.stdout)
+        self.assertIn("q2-fit-out-fits (supporting, new)", preview.stdout)
+        self.assertIn("mina-kowalski (new)", preview.stdout)
+        self.assertIn("## Context", preview.stdout)
+        self.assertIn("## Options considered", preview.stdout)
+        self.assertIn("## Who decided", preview.stdout)
+        self.assertIn("Supersedes: 2026-07-29-open-south-hub-q1", preview.stdout)
+        self.assertFalse(note.exists())
+        self.assertFalse(person.exists())
+        self.assertFalse(assumption.exists())
+
+        written = subprocess.run(cmd, cwd=ROOT, env=self.box.env, text=True, capture_output=True)
+        self.assertEqual(written.returncode, 0, written.stderr + written.stdout)
+        self.assertIn("replaced by: Open the Rotterdam South hub in Q2", written.stdout)
+        text = note.read_text(encoding="utf-8")
+        frontmatter, body = text.split("---", 2)[1], text.split("---", 2)[2]
+        self.assertNotIn("\ntext:", frontmatter)
+        self.assertIn("status: live", frontmatter)
+        self.assertIn("**Rationale:** The Q1 budget was cut by 20%.", body)
+        self.assertIn("## Context\nThe north hub still runs at 92% capacity.", body)
+        self.assertIn("## Options considered\n- Open in Q2.", body)
+        self.assertIn('Mina Kowalski said "Q2".', body)
+        self.assertIn("# Mina Kowalski", person.read_text(encoding="utf-8"))
+        self.assertIn("Hub planner", person.read_text(encoding="utf-8"))
+        self.assertIn("# The Q2 fit-out fits the revised budget.", assumption.read_text(encoding="utf-8"))
+
+        found = by_title(self.box.query("5-why", term="revised Q2 envelope"))
+        self.assertIn(title, found)
+        self.assertEqual(
+            sorted(found[title]["decided_by"]),
+            ["mina-kowalski", "olu-adeyemi", "tomasz-wilk"],
+        )
+        fit = by_title(self.box.query("1-ripple", assumption="q2-fit-out-fits"))
+        self.assertEqual(fit[title]["weight"], "supporting")
+        lease = by_title(self.box.query("1-ripple", assumption="south-hub-lease-signed"))
+        self.assertEqual(lease[title]["weight"], "critical")
+        hub = by_title(self.box.query("3-precheck", project="hub-2-rotterdam-south"))
+        self.assertEqual(hub[HUB_Q1]["status"], "superseded")
+        self.assertEqual(hub[HUB_Q1]["replaced_by"], [title])
+        self.assertEqual(hub[title]["status"], "live")
+
+        checked = subprocess.run(
+            [sys.executable, "scripts/check_vault.py"],
+            cwd=ROOT, env=self.box.env, text=True, capture_output=True,
+        )
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
+    def test_a_typo_or_an_unlinked_new_note_writes_nothing(self):
+        """A missing slug is refused and named when it is close. A new assumption that nothing rests on is refused."""
+        typo = subprocess.run(
+            [
+                sys.executable, "scripts/add_decision.py", "Paint the dock",
+                "--date", "2026-12-02",
+                "--project", "hub-2-rotterdam-south",
+                "--by", "olu-adeyemi",
+                "--rests-on", "q1-budget-hold:critical",
+                "--rationale", "A typo must not become a note.",
+            ],
+            cwd=ROOT, env=self.box.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(typo.returncode, 0, typo.stdout)
+        self.assertIn("Did you mean q1-budget-holds?", typo.stderr)
+        self.assertFalse((self.box.vault / "Assumption" / "q1-budget-hold.md").exists())
+        self.assertEqual(list(self.box.vault.glob("Decision/*paint-the-dock*")), [])
+
+        unlinked = subprocess.run(
+            [
+                sys.executable, "scripts/add_decision.py", "Paint the dock",
+                "--date", "2026-12-02",
+                "--project", "hub-2-rotterdam-south",
+                "--by", "olu-adeyemi",
+                "--rests-on", "q1-budget-holds",
+                "--new-assumption", "q2-fit-out-fits", "The Q2 fit-out fits the revised budget.",
+                "--rationale", "The new assumption is not linked.",
+            ],
+            cwd=ROOT, env=self.box.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(unlinked.returncode, 0, unlinked.stdout)
+        self.assertIn("does not rest on it", unlinked.stderr)
+        self.assertFalse((self.box.vault / "Assumption" / "q2-fit-out-fits.md").exists())
+
+        duplicate = subprocess.run(
+            [
+                sys.executable, "scripts/add_decision.py", "Rename the hub lead",
+                "--date", "2026-12-03",
+                "--project", "hub-2-rotterdam-south",
+                "--by", "nia-okonkwo",
+                "--new-person", "nia-okonkwo", "Olu Adeyemi", "Planner",
+                "--rests-on", "q1-budget-holds",
+                "--rationale", "This person already has a note.",
+            ],
+            cwd=ROOT, env=self.box.env, text=True, capture_output=True,
+        )
+        self.assertNotEqual(duplicate.returncode, 0, duplicate.stdout)
+        self.assertIn("already headed 'Olu Adeyemi' (olu-adeyemi)", duplicate.stderr)
+        self.assertFalse((self.box.vault / "Person" / "nia-okonkwo.md").exists())
+        self.assertEqual(list(self.box.vault.glob("Decision/*rename-the-hub-lead*")), [])
+
+    def test_signal_dry_run_writes_neither_note_nor_brief(self):
+        before = sorted(path.name for path in self.box.vault.glob("Signal/*.md"))
+        result = subprocess.run(
+            [
+                sys.executable, "scripts/add_signal.py", "q1-budget-holds", "BREAKS",
+                "Finance cuts the Q1 budget by 20%",
+                "--source", "Board memo", "--date", "2026-12-01", "--dry-run",
+            ],
+            cwd=ROOT, env=self.box.env, text=True, capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Dry run. Nothing written.", result.stdout)
+        self.assertIn("BREAKS q1-budget-holds:", result.stdout)
+        self.assertEqual(sorted(path.name for path in self.box.vault.glob("Signal/*.md")), before)
+        self.assertEqual(list(self.box.briefs.glob("*.md")), [])
 
 
 if __name__ == "__main__":

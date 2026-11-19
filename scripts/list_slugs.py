@@ -6,6 +6,7 @@
 
 A slug is the filename without .md. It matches the note's name field.
 add_signal.py, add_decision.py, and the query parameters want that slug, not the title.
+The first line is the vault folder. A decision line ends with [live] or [superseded].
 DECISION_VAULT selects the folder. Unset, this lists vault/ in this repo.
 """
 
@@ -24,20 +25,31 @@ def vault_dir():
     return Path(raw) if raw else ROOT / "vault"
 
 
-def blurb(path):
+def header_fields(path):
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---"):
-        return ""
+        return {}
     end = text.find("\n---", 3)
     if end == -1:
-        return ""
+        return {}
+    found = {}
     for line in text[3:end].splitlines():
         if not line or line[0] == " " or ":" not in line:
             continue
         key, value = line.split(":", 1)
-        if key.strip() in BLURB:
-            return value.strip().strip('"').strip("'")
-    return ""
+        found[key.strip()] = value.strip().strip('"').strip("'")
+    return found
+
+
+def blurb(fields, label):
+    text = ""
+    for key in BLURB:
+        if fields.get(key):
+            text = fields[key]
+            break
+    if label == "Decision" and fields.get("status"):
+        text = f"{text} [{fields['status']}]".strip()
+    return text
 
 
 def notes(root, label):
@@ -48,7 +60,7 @@ def notes(root, label):
     for path in sorted(folder.glob("*.md")):
         if path.name in SKIP:
             continue
-        found.append((path.stem, blurb(path)))
+        found.append((path.stem, blurb(header_fields(path), label)))
     return found
 
 
@@ -71,6 +83,7 @@ def main():
     if not labels:
         labels = list(LABELS)
 
+    print(f"Vault: {root}")
     for index, label in enumerate(labels):
         if index:
             print()

@@ -1,5 +1,6 @@
 """Run Cypher against vault/ through the Relate CLI."""
 
+import difflib
 import json
 import os
 import re
@@ -31,15 +32,16 @@ class _Vault:
 VAULT = _Vault()
 
 
-def cypher(statement, **params):
+def cypher(query_text, **params):
     # The Python client has no markdown snapshot option yet, so all access goes through the CLI.
     # --markdown-body-properties maps the note body to `text`, so a write can set it.
+    # The first argument is not named `statement`: callers pass a Cypher parameter of that name.
     cmd = ["relate", "query", "--snapshot-format", "markdown", "--markdown-body-properties", "text",
            "--database", str(VAULT), "--json", "--max-rows", "0"]
     for key, value in params.items():
         # --param parses JSON first, so "2026-12-01" would fail as a number. Quote it.
         cmd += ["--param", f"{key}={json.dumps(value)}"]
-    out = subprocess.run(cmd, input=statement, capture_output=True, text=True)
+    out = subprocess.run(cmd, input=query_text, capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(f"relate failed ({out.returncode}): {out.stdout or out.stderr}")
     return json.loads(out.stdout)["data"]
@@ -53,9 +55,24 @@ def names(label):
     return [r["name"] for r in cypher(f"MATCH (n:{label}) RETURN n.name AS name ORDER BY name")]
 
 
+def missing(label, name, known=None):
+    """Empty string when `name` is a real note. Otherwise the message to exit with.
+
+    A close slug is named so a typo is not treated as a note that still has to be created.
+    """
+    if known is None:
+        known = names(label)
+    if name in known:
+        return ""
+    close = difflib.get_close_matches(name, list(known), n=1, cutoff=0.8)
+    hint = f" Did you mean {close[0]}?" if close else ""
+    return f"No {label} '{name}'.{hint} Known: {', '.join(known)}"
+
+
 def require(label, name):
-    if name not in names(label):
-        sys.exit(f"No {label} '{name}'. Known: {', '.join(names(label))}")
+    message = missing(label, name)
+    if message:
+        sys.exit(message)
 
 
 def slug(text):
