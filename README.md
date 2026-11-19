@@ -1,4 +1,4 @@
-# Kestrel decision graph <!-- [C] working title, hers to change -->
+# decision-ripple
 
 A decision log that notices when its assumptions break.
 
@@ -63,8 +63,8 @@ You need the Relate CLI (tested on v1.1.0) and Python 3 (tested on 3.14). No Pyt
 curl -sSfL https://relatedb.ai/install.sh | bash
 relate --version
 
-git clone https://github.com/charlottebepbop/<repo>.git   # [C] fill in after the repo exists
-cd <repo>
+git clone https://github.com/charlottebepbop/decision-ripple.git
+cd decision-ripple
 ```
 
 **1. Ask the graph.** Four queries in `queries/`, each run against the vault:
