@@ -11,7 +11,7 @@ The sample company is made up: **Kestrel Cargo**, a cargo-bike delivery firm in 
 
 - A **decision rests on assumptions**. Some are critical, some only support it.
 - A **decision steers projects**, and **people** made it, own the project or hold a stake.
-- A **signal** (a report, a memo, a supplier notice) **confirms, weakens or breaks** an assumption.
+- A **signal** (a report, a memo, a supplier notice) **confirms, supports, weakens or breaks** an assumption.
 - A newer decision **supersedes** or **amends** an older one.
 
 So one new fact can reach decisions, projects and people that never mention it. The graph
@@ -25,7 +25,7 @@ finds them. A flat list of notes cannot.
   - The store is the notes. People read and edit them in Obsidian or any editor. Git diffs
     show what changed and who changed it. A decision log people can't read is a decision log
     nobody keeps.
-  - Cypher writes go back into the files. `scripts/signal.py` adds a signal with `MERGE` and
+  - Cypher writes go back into the files. `scripts/add_signal.py` adds a signal with `MERGE` and
     a new note appears in `vault/Signal/`.
   - A directory store lets one process write while the MCP server follows along
     (`--read-only=live`). A single `.rl` file refuses live mode.
@@ -40,7 +40,7 @@ finds them. A flat list of notes cannot.
 | Signal | 3 | "October driver churn was 6.9%" |
 
 Relationships: `RESTS_ON` (with `weight: critical`, else supporting), `STEERS`, `DECIDED_BY`,
-`OWNED_BY`, `STAKEHOLDER`, `SUPERSEDES`, `AMENDS`, `CONFIRMS`, `WEAKENS`, `BREAKS`.
+`OWNED_BY`, `STAKEHOLDER`, `SUPERSEDES`, `AMENDS`, `CONFIRMS`, `SUPPORTS`, `WEAKENS`, `BREAKS`.
 
 A note looks like this. Frontmatter wikilinks become relationships:
 
@@ -85,13 +85,27 @@ relate query --snapshot-format markdown --database . --mode table \
 **2. Record a new signal.** From the repo root:
 
 ```bash
-python3 scripts/signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget by 20%" --source "Board memo"
+python3 scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget by 20%" --source "Board memo"
 ```
 
 This writes `vault/Signal/<date>-finance-cuts-the-q1-budget-by-20.md` and a brief in
 `briefs/`: 5 live decisions at risk (3 critical) and 7 people to tell, most exposed first.
+Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.
 
-**3. Let an agent use it.** `.mcp.json` starts Relate's MCP server on the vault, read-only and
+**3. Record the decision that follows.** The hub's Q1 opening lost its budget, so it moves to Q2:
+
+```bash
+python3 scripts/add_decision.py "Open the Rotterdam South hub in Q2" \
+  --project hub-2-rotterdam-south --by olu-adeyemi --by tomasz-wilk \
+  --rests-on south-hub-lease-signed:critical --rests-on series-a-close-march \
+  --supersedes 2026-07-29-open-south-hub-q1 --rationale "The Q1 budget was cut by 20%."
+```
+
+This writes a new note in `vault/Decision/`, links it with `SUPERSEDES`, and sets the Q1
+decision to `superseded`. The pre-check it prints now points from Q1 to Q2. Use `--amends`
+for a change that keeps the old decision live.
+
+**4. Let an agent use it.** `.mcp.json` starts Relate's MCP server on the vault, read-only and
 live. It offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent to run
 the pre-check before it plans work on a project. With Claude Code:
 
@@ -102,7 +116,8 @@ claude
 
 The agent finds the 3 decisions that steer the hub. It then follows shared assumptions to
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
-supplier has flagged a slip. Run step 2, ask again, and the budget break shows up.
+supplier has flagged a slip. Run step 2, ask again, and the budget break shows up. Run step 3,
+ask again, and the agent plans on the Q2 decision.
 
 **Reset** to the committed vault at any time:
 
@@ -127,7 +142,7 @@ Found while building, all on v1.1.0:
 - The map form for relationship properties needs at least one bare wikilink of that type
   somewhere in the vault. So supporting `RESTS_ON` links are bare, and only critical ones carry
   `weight`.
-- The Python client has no markdown snapshot option, so `signal.py` writes through the CLI.
-- `--param` parses its value as JSON first. `signal.py` JSON-quotes every value so a date stays
+- The Python client has no markdown snapshot option, so the scripts in `scripts/` use the CLI.
+- `--param` parses its value as JSON first. `scripts/graph.py` JSON-quotes every value so a date stays
   a string.
 - `relate serve` does not take `--markdown-body-properties`.

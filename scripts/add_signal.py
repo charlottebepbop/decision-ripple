@@ -1,6 +1,6 @@
 """Record a new signal in the vault and write a "who to tell" brief.
 
-    python scripts/signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget by 20%" \
+    python scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget by 20%" \
         --source "Board memo" --date 2026-12-01
 
 The signal becomes a note in vault/Signal/. The brief lands in briefs/.
@@ -8,34 +8,12 @@ The signal becomes a note in vault/Signal/. The brief lands in briefs/.
 
 import argparse
 import datetime as dt
-import json
-import re
-import subprocess
-import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-VAULT = ROOT / "vault"
-QUERIES = ROOT / "queries"
+from graph import ROOT, cypher, query, require, slug
+
 BRIEFS = ROOT / "briefs"
-EFFECTS = ("BREAKS", "WEAKENS", "CONFIRMS")
-
-
-def cypher(statement, **params):
-    # The Python client has no markdown snapshot option yet, so writes go through the CLI.
-    cmd = ["relate", "query", "--snapshot-format", "markdown",
-           "--database", str(VAULT), "--json", "--max-rows", "0"]
-    for key, value in params.items():
-        # --param parses JSON first, so "2026-12-01" would fail as a number. Quote it.
-        cmd += ["--param", f"{key}={json.dumps(value)}"]
-    out = subprocess.run(cmd, input=statement, capture_output=True, text=True)
-    if out.returncode != 0:
-        sys.exit(f"relate failed ({out.returncode}): {out.stdout or out.stderr}")
-    return json.loads(out.stdout)["data"]
-
-
-def slug(text):
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+# SUPPORTS is a weaker CONFIRMS: evidence for the assumption, not proof.
+EFFECTS = ("BREAKS", "WEAKENS", "SUPPORTS", "CONFIRMS")
 
 
 def main():
@@ -43,15 +21,12 @@ def main():
     ap.add_argument("assumption", help="name of the Assumption note the signal hits")
     ap.add_argument("effect", choices=EFFECTS)
     ap.add_argument("title", help="one line: what happened")
-    ap.add_argument("--source", default="unknown")
+    ap.add_argument("--source", required=True, help="where it came from: a report, memo or notice")
     ap.add_argument("--date", default=dt.date.today().isoformat())
     args = ap.parse_args()
 
-    found = cypher("MATCH (a:Assumption {name: $a}) RETURN a.statement AS statement", a=args.assumption)
-    if not found:
-        known = cypher("MATCH (a:Assumption) RETURN a.name AS name ORDER BY name")
-        sys.exit(f"No assumption '{args.assumption}'. Known: {', '.join(r['name'] for r in known)}")
-    statement = found[0]["statement"]
+    require("Assumption", args.assumption)
+    statement = cypher("MATCH (a:Assumption {name: $a}) RETURN a.statement AS s", a=args.assumption)[0]["s"]
 
     name = f"{args.date}-{slug(args.title)}"
     # The relationship type cannot be a parameter, so it is checked against EFFECTS above.
@@ -63,8 +38,8 @@ def main():
         a=args.assumption, name=name, title=args.title, source=args.source, date=args.date,
     )
 
-    ripple = cypher((QUERIES / "1-ripple.cypher").read_text(), assumption=args.assumption)
-    tell = cypher((QUERIES / "4-tell.cypher").read_text(), assumption=args.assumption)
+    ripple = query("1-ripple", assumption=args.assumption)
+    tell = query("4-tell", assumption=args.assumption)
 
     lines = [
         f"# {args.title}",
@@ -73,7 +48,7 @@ def main():
         f"> {statement}",
         "",
     ]
-    if args.effect == "CONFIRMS" or not ripple:
+    if args.effect in ("SUPPORTS", "CONFIRMS") or not ripple:
         lines.append("No live decision needs a second look.")
     else:
         crit = sum(1 for r in ripple if r["weight"] == "critical")
