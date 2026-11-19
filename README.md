@@ -17,6 +17,25 @@ The sample company is made up: **Kestrel Cargo**, a cargo-bike delivery firm in 
 So one new fact can reach decisions, projects and people that never mention it. The graph
 finds them. A flat list of notes cannot.
 
+A budget cut is the shape of that walk. The signal never has to mention a hub, a hiring plan, or a person:
+
+```mermaid
+flowchart LR
+  sig["Finance cuts the Q1 budget by 20%"] -->|BREAKS| a["Q1 budget stays at plan"]
+  a -->|critical| h["Hire 25 drivers in Q1"]
+  a -->|critical| l["Hire the Lyon city lead in December"]
+  a -->|critical| hub["Open the Rotterdam South hub in Q1"]
+  a -->|supporting| f["Freeze hiring outside Operations"]
+  a -->|supporting| b["Lease half the e-cargo bikes, buy half"]
+  h --> dh["driver-hiring-q1"]
+  l --> ll["lyon-launch"]
+  hub --> sh["hub-2-rotterdam-south"]
+  f --> ep["enterprise-pricing"]
+  b --> fl["fleet-ebike-upgrade"]
+```
+
+The tell list starts with **olu-adeyemi** (Head of Operations) and **priya-raman** (Head of Finance), 3 critical decisions each.
+
 ## How it uses Relate
 
 - **Mode: directory.** The store is `vault/`, a folder of markdown notes read by Relate's
@@ -65,7 +84,10 @@ relate --version
 
 git clone https://github.com/charlottebepbop/decision-ripple.git
 cd decision-ripple
+./scripts/demo.sh
 ```
+
+`./scripts/demo.sh` is the whole story on a throwaway copy of the vault. It builds the index, prints the assumptions that are already broken, records one memo that hits two of them, replaces the Rotterdam South hub decision twice, and searches for why the mapping contract changed. The committed notes stay as they are. `examples/demo-script.md` is the shot list for filming that run.
 
 **1. Ask the graph.** First build the full-text index once. It maps note bodies to the `text`
 property and indexes decision titles and bodies:
@@ -76,11 +98,11 @@ relate query --snapshot-format markdown --markdown-body-properties text --databa
   < ../queries/0-setup.cypher
 ```
 
-Then run any of the five queries in `queries/`:
+Then run any of the six queries in `queries/`:
 
 ```bash
 relate query --snapshot-format markdown --database . --mode table \
-  --param assumption=q1-budget-holds < ../queries/1-ripple.cypher
+  < ../queries/6-exposed.cypher
 ```
 
 | Query | Question | Parameter |
@@ -90,6 +112,7 @@ relate query --snapshot-format markdown --database . --mode table \
 | `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what is under pressure? | `project` |
 | `4-tell.cypher` | The ripple, turned around per person, most exposed first | `assumption` |
 | `5-why.cypher` | Why did we decide this? Full-text `SEARCH` over decision notes, then who decided, what it rests on, what replaced it | `term` |
+| `6-exposed.cypher` | What is already broken? Which live decisions still rest on an assumption a signal has weakened or broken? | none |
 
 **2. Record a new signal.** From the repo root:
 
@@ -99,7 +122,16 @@ python3 scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget
 
 This writes `vault/Signal/<date>-finance-cuts-the-q1-budget-by-20.md` and a brief in
 `briefs/`: 5 live decisions at risk (3 critical) and 8 people to tell, most exposed first.
-`examples/briefs/` holds three briefs made this way on a fresh clone, so you can read the
+Repeat `--and ASSUMPTION EFFECT` when one memo hits another assumption. One signal note gets
+both edges, and the brief has a section per assumption and one tell list:
+
+```bash
+python3 scripts/add_signal.py q1-budget-holds BREAKS \
+  "Finance cuts the Q1 budget and the bike supplier slips" \
+  --and ebike-supplier-delivers-feb WEAKENS --source "Board memo"
+```
+
+`examples/briefs/` holds four briefs made this way on a fresh clone, so you can read the
 output without running anything.
 Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.
 
@@ -113,7 +145,9 @@ python3 scripts/add_decision.py "Open the Rotterdam South hub in Q2" \
 ```
 
 This writes a new note in `vault/Decision/`, links it with `SUPERSEDES`, and sets the Q1
-decision to `superseded`. The pre-check it prints now points from Q1 to Q2. Use `--amends`
+decision to `superseded`. The pre-check it prints now points from Q1 to Q2. A later decision
+that supersedes Q2 is what the pre-check names for both: it walks `SUPERSEDES` (up to five
+hops) and keeps the decision whose status is still `live`. Use `--amends`
 for a change that keeps the old decision live.
 
 **4. Let an agent use it.** `.mcp.json` runs `scripts/serve.sh`. It builds the full-text index,
@@ -126,10 +160,12 @@ claude
 > Why did we drop the annual mapping contract?
 ```
 
-The agent finds the 3 decisions that steer the hub. It then follows shared assumptions to
+The agent runs `6-exposed` before it plans. On a fresh clone that is the scan-coverage break
+under the route optimizer and the ops dashboard, and the supplier slip under the bike lease.
+It finds the 3 decisions that steer the hub, then follows shared assumptions to
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
 supplier has flagged a slip. Run step 2, ask again, and the budget break shows up. Run step 3,
-ask again, and the agent plans on the Q2 decision.
+ask again, and the agent plans on the decision the pre-check still marks live.
 
 **Reset** to the committed vault at any time:
 
