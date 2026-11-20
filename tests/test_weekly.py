@@ -2,8 +2,7 @@
 
 The committed notes are not modified. These tests cover the window, grouping,
 mixed evidence, a decision counted once, and assumptions that have gone quiet.
-They do not change the six queries. The four expected failures in
-test_scenarios.py stay there on purpose.
+The double-count expected failure in test_scenarios.py stays there on purpose.
 """
 
 import subprocess
@@ -157,10 +156,10 @@ class WeeklyTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, args)
             self.assertEqual(list(self.box.briefs.glob("weekly-*.md")), [], args)
 
-    def test_high_confidence_break_is_listed_and_fragile_ground_is_unchanged(self):
-        """A break under high-confidence decisions shows up here.
+    def test_high_confidence_break_is_listed_and_fragile_ground_counts_it(self):
+        """A break under high-confidence decisions shows up here and on 2-fragile.
 
-        2-fragile still ignores Lyon, which is the expected failure in test_scenarios.py.
+        Launch Lyon before Paris is high confidence and rests on the permit, so lyon-launch is fragile ground.
         """
         self.box.add_signal(
             "lyon-permit-by-jan", "BREAKS", "The Lyon permit missed January",
@@ -174,14 +173,15 @@ class WeeklyTests(unittest.TestCase):
         self.assertIn("supporting, high — Paris waits for 3 months of Lyon data (Launch in Lyon)", risk)
         self.assertLess(risk.index(LAUNCH), risk.index(PARIS))
         self.assertLess(risk.index("**critical**, high — " + LAUNCH), risk.index("supporting, medium — Hire the Lyon city lead"))
-        projects = {row["project"] for row in self.box.query("2-fragile")}
-        self.assertNotIn("lyon-launch", projects)
+        projects = {row["project"]: row for row in self.box.query("2-fragile")}
+        self.assertIn("lyon-launch", projects)
+        self.assertEqual(projects["lyon-launch"]["high_confidence_broken"], 2)
         self.assertIn(LAUNCH, risk)
 
-    def test_support_sits_next_to_an_older_break_and_exposed_still_hides_it(self):
+    def test_support_sits_next_to_an_older_break_and_exposed_labels_it(self):
         """A support in the window names the earlier break and the critical decisions.
 
-        6-exposed still returns only BREAKS and WEAKENS. That expected failure stays.
+        6-exposed shows that support beside the break and labels it support, not risk.
         """
         self.box.add_signal(
             "ops-data-complete", "SUPPORTS", "A recount found the missing scans",
@@ -204,9 +204,12 @@ class WeeklyTests(unittest.TestCase):
         self.assertIn("Build the route optimizer in house", good)
         self.assertIn("The optimizer trains on scan data only", good)
         self.assertIn("1 supporting", good)
-        effects = {row["effect"] for row in self.box.query("6-exposed") if row["assumption"] == "ops-data-complete"}
+        exposed = [row for row in self.box.query("6-exposed") if row["assumption"] == "ops-data-complete"]
+        effects = {row["effect"] for row in exposed}
         self.assertIn("BREAKS", effects)
-        self.assertNotIn("SUPPORTS", effects)
+        self.assertIn("SUPPORTS", effects)
+        self.assertTrue(all(row["label"] == "support" for row in exposed if row["effect"] == "SUPPORTS"))
+        self.assertTrue(all(row["label"] == "risk" for row in exposed if row["effect"] == "BREAKS"))
         self.assertIn(
             "1 signal supports an assumption that has also been broken or weakened.",
             text,
@@ -228,8 +231,12 @@ class WeeklyTests(unittest.TestCase):
         self.assertIn("this week", good)
         self.assertIn("See Live decisions at risk.", good)
         self.assertIn(SCAN, section(text, "Broke or weakened"))
-        effects = {row["effect"] for row in self.box.query("6-exposed")}
-        self.assertNotIn("SUPPORTS", effects)
+        exposed = self.box.query("6-exposed")
+        effects = {row["effect"] for row in exposed}
+        self.assertIn("SUPPORTS", effects)
+        self.assertTrue(all(
+            row["label"] == "support" for row in exposed if row["effect"] == "SUPPORTS"
+        ))
 
     def test_an_earlier_confirm_sits_next_to_a_new_weaken(self):
         self.box.add_signal(

@@ -6,9 +6,9 @@ Pause on each banner. The spoken line is the one sentence for that beat.
 
 ## 1. What is already broken
 
-Spoken: A fresh clone already knows which assumptions have failed, and which live decisions still rest on them.
+Spoken: A fresh clone already knows which assumptions have failed, which live decisions still rest on them, and which news is only a confirmation.
 
-On screen: “Scan coverage was 88% of trips in October” breaks `ops-data-complete` under four live decisions, three of them critical. “Supplier flags a 3-week slip on e-cargo bikes” weakens the February delivery under “Lease half the e-cargo bikes, buy half.”
+On screen: “Scan coverage was 88% of trips in October” breaks `ops-data-complete` under four live decisions, three of them critical. “Supplier flags a 3-week slip on e-cargo bikes” weakens the February delivery under “Lease half the e-cargo bikes, buy half.” “October driver churn was 6.9%” confirms driver churn. That row is labelled confirmation, not risk, and it names the retention bonus, staffing the south hub from the north hub, and the 98% on-time SLA.
 
 ## 2. One memo, two assumptions
 
