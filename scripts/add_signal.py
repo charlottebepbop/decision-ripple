@@ -8,16 +8,20 @@
         --and ebike-supplier-delivers-feb WEAKENS \
         --source "Board memo" --date 2026-12-04
 
-The signal becomes one note in vault/Signal/. Repeat --and for each extra assumption.
-The brief lands in briefs/.
+The signal becomes one note under Signal/ in DECISION_VAULT, or in vault/ when that
+variable is unset. Repeat --and for each extra assumption. The brief lands in
+DECISION_BRIEFS, or in briefs/. Pass the assumption slug from list_slugs.py, not the title.
+--dry-run checks those slugs and writes neither the note nor the brief.
 """
 
 import argparse
 import datetime as dt
+import difflib
 import os
+import sys
 from pathlib import Path
 
-from graph import ROOT, VAULT, cypher, query, require, slug
+from graph import ROOT, VAULT, cypher, names, query, require, slug
 
 BRIEFS = Path(os.environ["DECISION_BRIEFS"]) if os.environ.get("DECISION_BRIEFS") else ROOT / "briefs"
 # SUPPORTS is a weaker CONFIRMS: evidence for the assumption, not proof.
@@ -70,6 +74,23 @@ def merge_tell(groups):
     return [{"person": person, **slot} for person, slot in ordered]
 
 
+def assumption_statement(name):
+    require("Assumption", name)
+    statement = cypher("MATCH (a:Assumption {name: $a}) RETURN a.statement AS s", a=name)[0]["s"]
+    if isinstance(statement, str) and statement.strip():
+        return statement
+    # Relate creates an empty note when a wikilink names a file that does not exist yet.
+    # require() then sees that phantom and a signal would print "> None".
+    others = [item for item in names("Assumption") if item != name]
+    close = difflib.get_close_matches(name, others, n=1, cutoff=0.8)
+    hint = f" Did you mean {close[0]}?" if close else ""
+    sys.exit(
+        f"{name} is an empty note, not a real assumption. "
+        f"Relate creates one when a link is mistyped, and a signal against it would have nothing to say.{hint} "
+        "Use the real assumption name, and delete the empty note."
+    )
+
+
 def show(path):
     try:
         return path.relative_to(ROOT)
@@ -86,6 +107,7 @@ def main():
                     help="another assumption this signal hits, and its effect (repeat)")
     ap.add_argument("--source", required=True, help="where it came from: a report, memo or notice")
     ap.add_argument("--date", default=dt.date.today().isoformat())
+    ap.add_argument("--dry-run", action="store_true", help="Check the assumptions and write nothing")
     args = ap.parse_args()
 
     hits = [(args.assumption, args.effect)]
@@ -94,13 +116,26 @@ def main():
             ap.error(f"--and {assumption} {effect}: effect must be one of {', '.join(EFFECTS)}")
         hits.append((assumption, effect))
     seen = set()
+    statements = {}
     for assumption, _effect in hits:
         if assumption in seen:
             ap.error(f"{assumption} is listed twice")
         seen.add(assumption)
-        require("Assumption", assumption)
+        statements[assumption] = assumption_statement(assumption)
 
     name = f"{args.date}-{slug(args.title)}"
+    if args.dry_run:
+        print(f"Vault: {VAULT}")
+        print("Dry run. Nothing written.")
+        print()
+        print(f"Signal file: Signal/{name}.md")
+        print(f"Title: {args.title}")
+        print(f"Date: {args.date}")
+        print(f"Source: {args.source}")
+        for assumption, effect in hits:
+            print(f"{effect} {assumption}: {statements[assumption]}")
+        return
+
     # The relationship type cannot be a parameter, so it is checked against EFFECTS above.
     cypher(
         "MERGE (s:Signal {name: $name}) "
@@ -117,7 +152,7 @@ def main():
     sections = []
     tell_groups = []
     for assumption, effect in hits:
-        statement = cypher("MATCH (a:Assumption {name: $a}) RETURN a.statement AS s", a=assumption)[0]["s"]
+        statement = statements[assumption]
         ripple = query("1-ripple", assumption=assumption)
         look = needs_look(effect, ripple)
         tell = query("4-tell", assumption=assumption) if look else []
