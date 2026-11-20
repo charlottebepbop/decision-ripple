@@ -111,11 +111,12 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(titles(exposed), titles(ripple))
         self.assertNotIn(BUY, titles(exposed))
 
-    def test_already_broken_view_ignores_confirmed_assumptions(self):
+    def test_confirmed_assumptions_are_labelled_and_not_risk(self):
         """On a fresh clone, scan coverage breaks four live decisions and the supplier slip weakens the lease.
 
-        The October churn report confirms driver churn. It flags nobody, including the retention bonus.
-        The superseded bike purchase is not flagged either.
+        The October churn report confirms driver churn. Those rows are labelled confirmation,
+        and they name the bonus, the south-hub staffing, and the 98% SLA. They are not risk.
+        The superseded bike purchase is absent.
         """
         rows = self.box.query("6-exposed")
         self.assertEqual(exposed_view(rows), [
@@ -124,24 +125,37 @@ class ScenarioTests(unittest.TestCase):
             (SCAN_SIGNAL, "BREAKS", "ops-data-complete", SCAN_ONLY, "critical", ("ops-dashboard", "route-optimizer-v2")),
             (SCAN_SIGNAL, "BREAKS", "ops-data-complete", WEEKLY, "supporting", ("ops-dashboard",)),
             (SUPPLIER_SIGNAL, "WEAKENS", "ebike-supplier-delivers-feb", LEASE, "critical", ("fleet-ebike-upgrade",)),
+            (CHURN_SIGNAL, "CONFIRMS", "driver-churn-under-8", SLA_98, "critical", ("customer-sla-program",)),
+            (CHURN_SIGNAL, "CONFIRMS", "driver-churn-under-8", STAFF, "critical", ("driver-hiring-q1", "hub-2-rotterdam-south")),
+            (CHURN_SIGNAL, "CONFIRMS", "driver-churn-under-8", BONUS, "supporting", ("driver-hiring-q1",)),
         ])
-        flagged = titles(rows)
-        self.assertNotIn(BONUS, flagged)
-        self.assertNotIn(BUY, flagged)
-        self.assertNotIn(STAFF, flagged)
-        self.assertNotIn(CHURN_SIGNAL, [row["signal"] for row in rows])
-        self.assertNotIn("CONFIRMS", [row["effect"] for row in rows])
+        for row in rows:
+            if row["effect"] in ("BREAKS", "WEAKENS"):
+                self.assertEqual(row["label"], "risk")
+            elif row["effect"] == "CONFIRMS":
+                self.assertEqual(row["label"], "confirmation")
+        self.assertNotIn(BUY, titles(rows))
+        self.assertEqual(
+            [row["decision"] for row in rows if row["effect"] == "CONFIRMS"],
+            [SLA_98, STAFF, BONUS],
+        )
 
-    def test_weaken_and_break_flag_the_same_lyon_decisions_support_does_not(self):
+    def test_weaken_and_break_flag_the_same_lyon_decisions_and_support_is_labelled(self):
         """Weakening the Lyon permit flags four live decisions. Breaking it flags the same four, as BREAKS.
 
-        Supporting the Q1 budget flags nobody. The runway plan steers Lyon but does not rest on the permit,
-        so it stays off the list. So do Diego, Ken, Lea, Tomasz and Ruth.
+        A weaken is not a break, so lyon-launch stays off fragile ground. Supporting the Q1 budget
+        lists those decisions in 6-exposed and in the brief, labelled support, and tells nobody.
+        The runway plan steers Lyon but does not rest on the permit, so it stays off the ripple.
+        So do Diego, Ken, Lea, Tomasz and Ruth.
         """
         self.box.add_signal(
             "lyon-permit-by-jan", "WEAKENS",
             "Lyon permit office asks for a second fire inspection",
             source="Email from the permit office", date="2026-12-03",
+        )
+        self.assertNotIn(
+            "lyon-launch",
+            {row["project"] for row in self.box.query("2-fragile")},
         )
         self.assertEqual(
             self.box.brief("2026-12-03-lyon-permit-office-asks-for-a-second-fire-inspection.md"),
@@ -201,9 +215,16 @@ class ScenarioTests(unittest.TestCase):
             source="Finance note", date="2026-12-09",
         )
         brief = self.box.brief("2026-12-09-the-q1-budget-still-matches-the-plan.md")
+        self.assertIn("## Support, not a risk", brief)
         self.assertIn("No live decision needs a second look.", brief)
+        self.assertIn(HIRE_25, brief)
+        self.assertNotIn("most exposed", brief)
+        self.assertNotIn(BUY, brief)
         supported = where(self.box.query("6-exposed"), signal="The Q1 budget still matches the plan")
-        self.assertEqual(supported, [])
+        self.assertEqual(titles(supported), titles(self.box.query("1-ripple", assumption="q1-budget-holds")))
+        self.assertTrue(supported)
+        self.assertTrue(all(row["effect"] == "SUPPORTS" and row["label"] == "support" for row in supported))
+        self.assertNotIn(BUY, titles(supported))
 
     def test_one_memo_hitting_two_assumptions_flags_the_union_once(self):
         """One memo breaks the budget and weakens the bike delivery.
@@ -474,12 +495,26 @@ class ScenarioTests(unittest.TestCase):
         for person in ("ken-ito", "lea-novak", "diego-morales", "saskia-de-wit", "ines-varga"):
             self.assertNotIn(person, people)
 
-    @unittest.expectedFailure
     def test_precheck_names_an_amendment_on_the_decision_it_changes(self):
-        """3-precheck walks SUPERSEDES and ignores AMENDS, so the amendment is invisible on the decision it changes."""
+        """3-precheck follows AMENDS the way it follows SUPERSEDES.
+
+        The EUR 1,800 price stays live and is not reported as replaced. The row names the
+        amendment and the two assumptions that amendment rests on. The amendment's own row
+        does not name itself.
+        """
         pre = by_title(self.box.query("3-precheck", project="enterprise-pricing"))
         shown = " ".join(str(value) for value in pre[PRICE].values())
         self.assertIn(SLA_ADD, shown)
+        self.assertEqual(pre[PRICE]["status"], "live")
+        self.assertEqual(pre[PRICE]["replaced_by"], [])
+        self.assertEqual(pre[PRICE]["amended_by"], [SLA_ADD])
+        self.assertEqual(sorted(pre[PRICE]["amendment_rests_on"]), [
+            f"{SLA_ADD}: enterprise-demand-3-pilots (supporting)",
+            f"{SLA_ADD}: sla-penalties-capped (critical)",
+        ])
+        self.assertEqual(pre[SLA_ADD]["amended_by"], [])
+        self.assertEqual(pre[SLA_ADD]["amendment_rests_on"], [])
+        self.assertEqual(pre[FREEZE]["amended_by"], [])
 
     def test_decision_with_no_assumptions_is_not_flagged(self):
         """A decision that rests on nothing is not flagged when the Lyon permit breaks.
@@ -544,9 +579,14 @@ class ScenarioTests(unittest.TestCase):
         for row in hub:
             self.assertEqual(row["status"], "live")
             self.assertEqual(row["replaced_by"], [])
+            self.assertEqual(row["amended_by"], [])
+            self.assertEqual(row["amendment_rests_on"], [])
             self.assertEqual(row["pressure"], [])
         self.assertNotIn(LEASE, titles(hub))
         self.assertNotIn(ANNUAL, titles(hub))
+        for row in route:
+            self.assertEqual(row["amended_by"], [])
+            self.assertEqual(row["amendment_rests_on"], [])
 
     def test_fragile_ground_is_only_the_three_weak_projects(self):
         """Fragile ground is the route optimizer, the ops dashboard, and the SLA program.
@@ -571,6 +611,8 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(rows["customer-sla-program"]["low_confidence_decisions"], 2)
         self.assertEqual(set(rows["customer-sla-program"]["decisions"]), {SLA_ADD, SLA_98})
         self.assertEqual(rows["customer-sla-program"]["hit_assumptions"], [])
+        for project in rows:
+            self.assertEqual(rows[project]["high_confidence_broken"], 0)
         for project in (
             "hub-2-rotterdam-south", "lyon-launch", "driver-hiring-q1",
             "fleet-ebike-upgrade", "enterprise-pricing",
@@ -609,19 +651,30 @@ class ScenarioTests(unittest.TestCase):
 
         self.assertEqual(self.box.query("5-why", term="zzznomatch"), [])
 
-    @unittest.expectedFailure
     def test_fragile_includes_high_confidence_decisions_on_a_broken_assumption(self):
-        """2-fragile only counts confidence=low, so a break under high-confidence decisions (Lyon permit, two of them critical) never shows up there."""
+        """A break under high-confidence decisions puts that project on 2-fragile and counts those decisions.
+
+        Launch Lyon before Paris and Paris waits for 3 months of Lyon data are high confidence
+        and rest on the Lyon permit. The depot decision is critical but medium confidence, so
+        it is not part of this count. driver-hiring-q1 is not fragile from the city-lead hire.
+        """
         self.box.add_signal(
             "lyon-permit-by-jan", "BREAKS", "The Lyon permit missed January",
             source="Permit office", date="2026-12-16",
         )
-        projects = {row["project"] for row in self.box.query("2-fragile")}
-        self.assertIn("lyon-launch", projects)
+        rows = {row["project"]: row for row in self.box.query("2-fragile")}
+        self.assertIn("lyon-launch", rows)
+        lyon = rows["lyon-launch"]
+        self.assertEqual(lyon["high_confidence_broken"], 2)
+        self.assertEqual(lyon["low_confidence_decisions"], 0)
+        self.assertEqual(set(lyon["decisions"]), {LAUNCH, PARIS})
+        self.assertEqual(lyon["hit_assumptions"], ["lyon-permit-by-jan (BREAKS)"])
+        self.assertNotIn("driver-hiring-q1", rows)
+        self.assertIn("route-optimizer-v2", rows)
+        self.assertEqual(rows["route-optimizer-v2"]["high_confidence_broken"], 0)
 
-    @unittest.expectedFailure
     def test_exposed_keeps_supporting_evidence_next_to_a_break(self):
-        """6-exposed only matches BREAKS and WEAKENS, so a SUPPORTS or CONFIRMS on the same assumption is invisible."""
+        """A SUPPORTS signal on an assumption that is also broken shows up beside the break, labelled support."""
         self.box.add_signal(
             "ops-data-complete", "SUPPORTS", "A recount found the missing scans",
             source="Ops data check", date="2026-12-18",
@@ -630,6 +683,9 @@ class ScenarioTests(unittest.TestCase):
         effects = {row["effect"] for row in rows}
         self.assertIn("BREAKS", effects)
         self.assertIn("SUPPORTS", effects)
+        self.assertTrue(all(row["label"] == "risk" for row in rows if row["effect"] == "BREAKS"))
+        self.assertTrue(all(row["label"] == "support" for row in rows if row["effect"] == "SUPPORTS"))
+        self.assertIn("A recount found the missing scans", [row["signal"] for row in rows if row["effect"] == "SUPPORTS"])
 
     def test_add_signal_refuses_an_empty_phantom_assumption(self):
         """A signal against the empty note Relate made from a typo is refused, and the closest real name is given."""

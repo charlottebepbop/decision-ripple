@@ -27,13 +27,16 @@ sys.path.insert(0, "scripts")
 from graph import query
 
 expected = [
-    ("Scan coverage was 88% of trips in October", "BREAKS", "Build the ops dashboard on scan data", "critical"),
-    ("Scan coverage was 88% of trips in October", "BREAKS", "Build the route optimizer in house", "critical"),
-    ("Scan coverage was 88% of trips in October", "BREAKS", "The optimizer trains on scan data only", "critical"),
-    ("Scan coverage was 88% of trips in October", "BREAKS", "Run the weekly ops review from the dashboard", "supporting"),
-    ("Supplier flags a 3-week slip on e-cargo bikes", "WEAKENS", "Lease half the e-cargo bikes, buy half", "critical"),
+    ("Scan coverage was 88% of trips in October", "BREAKS", "risk", "Build the ops dashboard on scan data", "critical"),
+    ("Scan coverage was 88% of trips in October", "BREAKS", "risk", "Build the route optimizer in house", "critical"),
+    ("Scan coverage was 88% of trips in October", "BREAKS", "risk", "The optimizer trains on scan data only", "critical"),
+    ("Scan coverage was 88% of trips in October", "BREAKS", "risk", "Run the weekly ops review from the dashboard", "supporting"),
+    ("Supplier flags a 3-week slip on e-cargo bikes", "WEAKENS", "risk", "Lease half the e-cargo bikes, buy half", "critical"),
+    ("October driver churn was 6.9%", "CONFIRMS", "confirmation", "Promise 98% on-time delivery in the SLA", "critical"),
+    ("October driver churn was 6.9%", "CONFIRMS", "confirmation", "Staff the south hub with drivers from the north hub", "critical"),
+    ("October driver churn was 6.9%", "CONFIRMS", "confirmation", "Pay a 3-month retention bonus to drivers", "supporting"),
 ]
-got = [(r["signal"], r["effect"], r["decision"], r["weight"]) for r in query("6-exposed")]
+got = [(r["signal"], r["effect"], r["label"], r["decision"], r["weight"]) for r in query("6-exposed")]
 if got != expected:
     sys.exit(f"exposed query mismatch:\n{got}")
 PY

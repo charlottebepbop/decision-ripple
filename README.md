@@ -128,11 +128,11 @@ python3 scripts/list_slugs.py project decision person
 | Query | Question | Parameter |
 |---|---|---|
 | `1-ripple.cypher` | This assumption broke. Which live decisions rest on it, which projects do they steer, who must hear? | `assumption` |
-| `2-fragile.cypher` | Which projects stand on 2 or more low-confidence decisions, and is any of the ground already hit? | none |
-| `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what is under pressure? | `project` |
+| `2-fragile.cypher` | Which projects stand on 2 or more low-confidence decisions, or on a high-confidence decision whose assumption has broken? | none |
+| `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what amended them and what that amendment rests on, what is under pressure? | `project` |
 | `4-tell.cypher` | The ripple, turned around per person, most exposed first | `assumption` |
 | `5-why.cypher` | Why did we decide this? Full-text `SEARCH` over decision notes, then who decided, what it rests on, what replaced it | `term` |
-| `6-exposed.cypher` | What is already broken? Which live decisions still rest on an assumption a signal has weakened or broken? | none |
+| `6-exposed.cypher` | Which live decisions still rest on an assumption a signal has weakened, broken, supported, or confirmed? Supports and confirmations are labelled and are not risk. | none |
 
 ```bash
 relate query --snapshot-format markdown --markdown-body-properties text \
@@ -149,7 +149,7 @@ relate query --snapshot-format markdown --markdown-body-properties text \
   < queries/2-fragile.cypher
 ```
 
-On the sample vault: `route-optimizer-v2` (3 low-confidence decisions), `customer-sla-program` (2), and `ops-dashboard` (2).
+On the sample vault: `route-optimizer-v2` (3 low-confidence decisions), `customer-sla-program` (2), and `ops-dashboard` (2). The high-confidence count on each of those rows is 0. **Launch Lyon before Paris** and **Paris waits for 3 months of Lyon data** are high confidence and both rest on the Lyon permit. A signal that breaks that permit puts `lyon-launch` on this list and counts those two. **Put the Lyon depot in Guillotiere** is medium confidence, so the count stays with those two. Only a `BREAKS` signal adds the project.
 
 ```bash
 relate query --snapshot-format markdown --markdown-body-properties text \
@@ -158,7 +158,9 @@ relate query --snapshot-format markdown --markdown-body-properties text \
   < queries/3-precheck.cypher
 ```
 
-On the sample vault: the Q1 hub opening, the runway plan, and staffing the south hub from the north hub, all still live.
+On the sample vault: the Q1 hub opening, the runway plan, and staffing the south hub from the north hub, all still live. None of them has been amended.
+
+On `enterprise-pricing` the EUR 1,800 price stays live. The pre-check names the amendment, **The enterprise tier includes the SLA**, and what that amendment rests on: `sla-penalties-capped` (critical) and `enterprise-demand-3-pilots` (supporting). The walk matches `SUPERSEDES`: up to five hops, and only a decision that is still live.
 
 ```bash
 relate query --snapshot-format markdown --markdown-body-properties text \
@@ -191,7 +193,7 @@ relate query --snapshot-format markdown --markdown-body-properties text \
   < queries/6-exposed.cypher
 ```
 
-On the sample vault: scan coverage breaks four live decisions, and the supplier slip weakens the bike lease.
+On the sample vault: scan coverage breaks four live decisions, and the supplier slip weakens the bike lease. Both are labelled `risk`. The October churn report confirms driver churn. That row is labelled `confirmation`, not risk. It names three live decisions: **Pay a 3-month retention bonus to drivers**, **Staff the south hub with drivers from the north hub**, and **Promise 98% on-time delivery in the SLA**. A support on an assumption that is also broken is labelled `support` and sits on the same assumption. Risk rows come first.
 
 **2. Record a new signal.** From the repo root:
 
@@ -214,7 +216,7 @@ python3 scripts/add_signal.py q1-budget-holds BREAKS \
 
 `examples/briefs/` holds four briefs made this way on a fresh clone, so you can read the
 output without running anything.
-Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.
+Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`. A `SUPPORTS` or `CONFIRMS` brief names the live decisions that rest on the assumption and labels them support or confirmation, not a risk. It still says that no live decision needs a second look, and it does not open a tell list. `6-exposed` shows the same signal, with that label.
 
 **3. Record the decision that follows.** The hub's Q1 opening lost its budget, so it moves to Q2:
 
@@ -229,7 +231,10 @@ This writes a new note in `Decision/`, links it with `SUPERSEDES`, and sets the 
 decision to `superseded`. The pre-check it prints now points from Q1 to Q2. A later decision
 that supersedes Q2 is what the pre-check names for both: it walks `SUPERSEDES` (up to five
 hops) and keeps the decision whose status is still `live`. Use `--amends`
-for a change that keeps the old decision live.
+for a change that keeps the old decision live. The pre-check walks `AMENDS` the same way,
+up to five hops, and names the live amending decision and what it rests on. The amended
+decision stays live. The printed line says `amended by` and `amendment rests on`. It does
+not say `replaced by`.
 
 `--context`, `--option` (once per option), and `--who-decided` are stored in the note under those headings. Without them the note is still the title and the rationale. `--dry-run` prints the note and writes nothing.
 
@@ -262,7 +267,7 @@ claude
 ```
 
 `/weekly` (`.claude/commands/weekly.md`) runs `scripts/weekly.py` and prints the briefing for the week. The agent runs `6-exposed` before it plans. On a fresh clone that is the scan-coverage break
-under the route optimizer and the ops dashboard, and the supplier slip under the bike lease.
+under the route optimizer and the ops dashboard, the supplier slip under the bike lease, and the October churn confirmation, labelled confirmation rather than a risk.
 It finds the 3 decisions that steer the hub, then follows shared assumptions to
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
 supplier has flagged a slip. Run step 2, ask again, and the budget break shows up. Run step 3,
@@ -296,7 +301,7 @@ Five sections:
 
 In Claude Code, `/weekly` runs the same script. Words after the command become `--since`, `--as-of`, or `--review-after`.
 
-The six queries above are unchanged. `6-exposed` is still every break and weaken on the books, with no date and no confirms. `2-fragile` still counts only low-confidence decisions. The briefing is the weekly read. It uses `queries/7-window.cypher` through `queries/11-evidence.cypher`.
+The briefing is the weekly read. It uses `queries/7-window.cypher` through `queries/11-evidence.cypher`. `6-exposed` has no date window. It lists every break and weaken, and also every support and confirmation, labelled `support` or `confirmation` so they are not read as risk. `2-fragile` counts low-confidence decisions, and also high-confidence decisions whose assumption a signal has broken. `3-precheck` follows `SUPERSEDES` and `AMENDS`.
 
 ## Start your own vault
 

@@ -61,6 +61,38 @@ def needs_look(effect, ripple):
     return effect not in ("SUPPORTS", "CONFIRMS") and bool(ripple)
 
 
+def good_news_lines(effect, ripple, heading=True):
+    """Name the decisions a support or confirmation touches, without calling them risk."""
+    if effect == "CONFIRMS":
+        kind, verb = "Confirmation", "confirms"
+    else:
+        kind, verb = "Support", "supports"
+    intro = f"This signal {verb} the assumption. It is not a break or a weakening."
+    if not ripple:
+        return [
+            f"{kind}, not a risk. {intro} No live decision rests on it.",
+            "No live decision needs a second look.",
+        ]
+    noun = "decision" if len(ripple) == 1 else "decisions"
+    lines = []
+    if heading:
+        lines += [f"## {kind}, not a risk", ""]
+    else:
+        lines.append(f"{kind}, not a risk.")
+    lines += [
+        f"{intro} {len(ripple)} live {noun} rest on it.",
+        "No live decision needs a second look.",
+        "",
+        "| Decision | Weight | Confidence | Projects |",
+        "|---|---|---|---|",
+    ]
+    for r in ripple:
+        lines.append(
+            f"| {r['decision']} | {r['weight']} | {r['confidence']} | {', '.join(r['projects'])} |"
+        )
+    return lines
+
+
 def merge_tell(groups):
     people = {}
     for rows in groups:
@@ -172,6 +204,8 @@ def main():
         if look:
             lines += decision_table(ripple)
             lines += ["", *tell_lines(tell_groups[0])]
+        elif effect in ("SUPPORTS", "CONFIRMS"):
+            lines += good_news_lines(effect, ripple, heading=True)
         else:
             lines.append("No live decision needs a second look.")
     else:
@@ -185,6 +219,8 @@ def main():
             lines += [f"## {effect}", f"> {statement}", ""]
             if look:
                 lines += decision_table(ripple)
+            elif effect in ("SUPPORTS", "CONFIRMS"):
+                lines += good_news_lines(effect, ripple, heading=False)
             else:
                 lines.append("No live decision needs a second look.")
             lines.append("")

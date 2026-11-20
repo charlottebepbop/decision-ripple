@@ -320,7 +320,13 @@ def main():
         print(f"\nPrecheck for {project}:")
         for row in query("3-precheck", project=project):
             replaced = [item for item in (row["replaced_by"] or []) if item]
+            amended = sorted(item for item in (row["amended_by"] or []) if item)
+            grounds = sorted(item for item in (row["amendment_rests_on"] or []) if item)
             extra = f" (replaced by: {'; '.join(replaced)})" if replaced else ""
+            if amended:
+                extra += f" (amended by: {'; '.join(amended)})"
+            if grounds:
+                extra += f" (amendment rests on: {'; '.join(grounds)})"
             pressure = f" | pressure: {'; '.join(row['pressure'])}" if row["pressure"] else ""
             print(f"- [{row['status']}] {row['decision']}{extra}{pressure}")
 

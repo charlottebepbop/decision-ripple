@@ -1,6 +1,7 @@
 // Signals dated from $since through $as_of, inclusive (YYYY-MM-DD).
 // Every effect is returned, so a break and a support on the same assumption
-// can sit together in the weekly briefing. The six product queries are unchanged.
+// can sit together in the weekly briefing. 6-exposed is the undated view
+// and labels the same supports and confirmations.
 MATCH (s:Signal)-[hit:BREAKS|WEAKENS|SUPPORTS|CONFIRMS]->(a:Assumption)
 WHERE s.date >= $since AND s.date <= $as_of
 RETURN s.date AS date, s.title AS signal, s.source AS source, s.name AS signal_name,
