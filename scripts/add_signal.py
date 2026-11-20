@@ -94,16 +94,37 @@ def good_news_lines(effect, ripple, heading=True):
 
 
 def merge_tell(groups):
+    """Merge one tell list per assumption into one row per person.
+
+    `groups` is `(tell rows, ripple rows)` for each assumption that needs a look.
+    The critical count is distinct decision titles. A live decision that is
+    critical under two assumptions counts once; summing each assumption's count
+    would count it twice. Each title is still named once, in the order the tell
+    lists returned it. The per-assumption sections keep listing it under each one.
+    """
     people = {}
-    for rows in groups:
-        for t in rows:
-            slot = people.setdefault(t["person"], {"role": t["role"], "critical": 0, "decisions": []})
-            slot["critical"] += t["critical"]
-            for decision in t["decisions"]:
+    for rows, ripple in groups:
+        critical = {row["decision"] for row in ripple if row["weight"] == "critical"}
+        for person in rows:
+            slot = people.setdefault(
+                person["person"],
+                {"role": person["role"], "critical_decisions": set(), "decisions": []},
+            )
+            for decision in person["decisions"]:
                 if decision not in slot["decisions"]:
                     slot["decisions"].append(decision)
-    ordered = sorted(people.items(), key=lambda item: (-item[1]["critical"], item[0]))
-    return [{"person": person, **slot} for person, slot in ordered]
+                if decision in critical:
+                    slot["critical_decisions"].add(decision)
+    ordered = sorted(people.items(), key=lambda item: (-len(item[1]["critical_decisions"]), item[0]))
+    return [
+        {
+            "person": name,
+            "role": slot["role"],
+            "critical": len(slot["critical_decisions"]),
+            "decisions": slot["decisions"],
+        }
+        for name, slot in ordered
+    ]
 
 
 def assumption_statement(name):
@@ -190,7 +211,7 @@ def main():
         tell = query("4-tell", assumption=assumption) if look else []
         sections.append((effect, statement, ripple, look))
         if look:
-            tell_groups.append(tell)
+            tell_groups.append((tell, ripple))
 
     if len(hits) == 1:
         effect, statement, ripple, look = sections[0]
@@ -203,7 +224,7 @@ def main():
         ]
         if look:
             lines += decision_table(ripple)
-            lines += ["", *tell_lines(tell_groups[0])]
+            lines += ["", *tell_lines(tell_groups[0][0])]
         elif effect in ("SUPPORTS", "CONFIRMS"):
             lines += good_news_lines(effect, ripple, heading=True)
         else:

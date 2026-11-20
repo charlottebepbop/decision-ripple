@@ -2,7 +2,6 @@
 
 The committed notes are not modified. These tests cover the window, grouping,
 mixed evidence, a decision counted once, and assumptions that have gone quiet.
-The double-count expected failure in test_scenarios.py stays there on purpose.
 """
 
 import subprocess
@@ -280,8 +279,7 @@ class WeeklyTests(unittest.TestCase):
     def test_tell_counts_a_doubly_critical_decision_once(self):
         """The same decision, critical under two assumptions hit this week, counts once per person.
 
-        The signal brief from add_signal.py still adds the two counts. That expected
-        failure stays in test_scenarios.py. This briefing does not.
+        It is still listed under each assumption. The signal brief counts it once too.
         """
         self.box.add_decision(
             HOLD,
