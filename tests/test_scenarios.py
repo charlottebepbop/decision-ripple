@@ -303,9 +303,11 @@ class ScenarioTests(unittest.TestCase):
             ],
         )
 
-    @unittest.expectedFailure
     def test_one_memo_counts_a_doubly_critical_decision_once_per_person(self):
-        """The merged tell list adds each assumption's critical count, so one decision that is critical under both is counted twice."""
+        """One memo on two assumptions counts a decision that is critical under both once per person.
+
+        The decision is still named once on that person's line. Priya is at 5 critical, not 6.
+        """
         self.box.add_decision(
             "Hold both the budget and the subsidy",
             date="2026-12-21", project="fleet-ebike-upgrade", by="priya-raman",
