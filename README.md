@@ -15,7 +15,9 @@ The sample company is made up: **Kestrel Cargo**, a cargo-bike delivery firm in 
 - A newer decision **supersedes** or **amends** an older one.
 
 So one new fact can reach decisions, projects and people that never mention it. The graph
-finds them. A flat list of notes cannot.
+finds them by following the assumptions people wrote down. It is only as good as those links.
+While a whole log fits in one prompt, a model reading the notes does as well or better. See
+[Where this loses](#where-this-loses).
 
 ## How it uses Relate
 
@@ -148,6 +150,28 @@ the notes on first open. That includes the full-text index, which `queries/0-set
 `scripts/serve.sh`) recreates. Note bodies are the `text` property of each node.
 `scripts/seed_vault.py` generates the notes, so the data can be
 rebuilt from code.
+
+## Where this loses
+
+I tested the idea on a real decision log of about 110 entries (about 45k tokens). It is not in
+this repo. Each run was a fresh agent session. Blind graders checked the answers against the log.
+
+| Test | Result |
+|---|---|
+| 8 questions: one session reads the log, one queries a graph parsed from it | Reading won 7 of 8. The graph was better on 1 |
+| An LLM pulls the assumptions out of the entries | A human marked 6 of 10 sampled links wrong |
+| Trap: ask for work that follows a superseded decision | The agent refused 3 of 3 and named the newer decision |
+
+What that means:
+
+- Reading wins while the log fits in one prompt. Each parsed field drops detail the full text keeps.
+  Most graph errors came from the parser, not from Cypher: amendments written in prose, and
+  replacements nobody marked.
+- Do not let a model write the `RESTS_ON` links. A person who made the decision writes them,
+  with the weight. Kestrel's links are set in `scripts/seed_vault.py`, not extracted from text.
+- The trap rule holds on real data. Not tested: whether plain reading passes it too.
+- The graph should start to pay off past one prompt, or across many people's logs. That is a
+  claim, not a result. It was not tested.
 
 ## Notes on Relate
 
