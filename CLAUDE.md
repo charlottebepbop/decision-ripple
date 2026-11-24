@@ -27,5 +27,6 @@ Rules for agents:
   A decision with no assumptions cannot be flagged by a later signal.
 - Do not write vault files by hand.
 - Answer with decision titles and person names from the graph, not guesses.
+  Name people by their `title` (Olu Adeyemi), never the slug (olu-adeyemi). `--by` takes either.
 - Start with the answer in one or two sentences. Then at most 5 short bullets. No tables.
   Give more only when the user asks for it.

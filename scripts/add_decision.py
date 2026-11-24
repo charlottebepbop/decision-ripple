@@ -12,14 +12,14 @@ The decision becomes a note in vault/Decision/. A superseded decision gets statu
 import argparse
 import datetime as dt
 
-from graph import cypher, query, require, slug
+from graph import cypher, person, query, require, slug
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("title")
     ap.add_argument("--project", action="append", required=True, help="Project it steers (repeat)")
-    ap.add_argument("--by", action="append", required=True, help="Person who decided (repeat)")
+    ap.add_argument("--by", action="append", required=True, help="Person who decided, slug or full name (repeat)")
     ap.add_argument("--rests-on", action="append", default=[],
                     help="Assumption it needs; add :critical if it fails without it (repeat)")
     old = ap.add_mutually_exclusive_group()
@@ -32,8 +32,7 @@ def main():
 
     for p in args.project:
         require("Project", p)
-    for person in args.by:
-        require("Person", person)
+    args.by = [person(who) for who in args.by]
     rests = []
     for item in args.rests_on:
         a, _, weight = item.partition(":")

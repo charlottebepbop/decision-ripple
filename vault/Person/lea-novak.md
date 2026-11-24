@@ -2,6 +2,7 @@
 type: Person
 name: lea-novak
 role: BizOps Lead
+title: Lea Novak
 ---
 
 # Lea Novak

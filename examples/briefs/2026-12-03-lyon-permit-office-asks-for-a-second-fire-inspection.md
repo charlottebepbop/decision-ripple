@@ -14,8 +14,8 @@ Signal `2026-12-03-lyon-permit-office-asks-for-a-second-fire-inspection` (Email 
 
 ## Tell 5 people, most exposed first
 
-- **hanna-berg** (Head of Growth, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
-- **ines-varga** (CEO, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
-- **olu-adeyemi** (Head of Operations, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
-- **priya-raman** (Head of Finance, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
-- **saskia-de-wit** (People Lead, 0 critical): Hire the Lyon city lead in December
+- **Hanna Berg** (Head of Growth, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **Ines Varga** (CEO, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **Olu Adeyemi** (Head of Operations, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **Priya Raman** (Head of Finance, 2 critical): Hire the Lyon city lead in December; Put the Lyon depot in Guillotiere; Paris waits for 3 months of Lyon data; Launch Lyon before Paris
+- **Saskia de Wit** (People Lead, 0 critical): Hire the Lyon city lead in December

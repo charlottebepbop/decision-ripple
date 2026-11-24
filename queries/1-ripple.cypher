@@ -8,5 +8,5 @@ RETURN d.title AS decision,
        coalesce(r.weight, 'supporting') AS weight,
        d.confidence AS confidence,
        collect(DISTINCT p.name) AS projects,
-       collect(DISTINCT who.name) AS tell
+       collect(DISTINCT who.title) AS tell
 ORDER BY weight, decision;

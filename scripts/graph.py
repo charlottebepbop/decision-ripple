@@ -38,5 +38,14 @@ def require(label, name):
         sys.exit(f"No {label} '{name}'. Known: {', '.join(names(label))}")
 
 
+def person(who):
+    """Return the slug for a person given by slug or by full name."""
+    rows = cypher("MATCH (p:Person) WHERE p.name = $w OR p.title = $w RETURN p.name AS name", w=who)
+    if not rows:
+        known = [f"{r['t']} ({r['n']})" for r in cypher("MATCH (p:Person) RETURN p.title AS t, p.name AS n ORDER BY n")]
+        sys.exit(f"No Person '{who}'. Known: {', '.join(known)}")
+    return rows[0]["name"]
+
+
 def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]

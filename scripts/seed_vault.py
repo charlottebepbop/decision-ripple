@@ -13,16 +13,16 @@ from decision_bodies import BODIES
 ROOT = Path(__file__).resolve().parent.parent / "vault"
 
 PEOPLE = {
-    "ines-varga": "CEO",
-    "tomasz-wilk": "COO",
-    "priya-raman": "Head of Finance",
-    "olu-adeyemi": "Head of Operations",
-    "hanna-berg": "Head of Growth",
-    "diego-morales": "Fleet Lead",
-    "saskia-de-wit": "People Lead",
-    "ken-ito": "CTO",
-    "lea-novak": "BizOps Lead",
-    "ruth-mensah": "Customer Success Lead",
+    "ines-varga": ("Ines Varga", "CEO"),
+    "tomasz-wilk": ("Tomasz Wilk", "COO"),
+    "priya-raman": ("Priya Raman", "Head of Finance"),
+    "olu-adeyemi": ("Olu Adeyemi", "Head of Operations"),
+    "hanna-berg": ("Hanna Berg", "Head of Growth"),
+    "diego-morales": ("Diego Morales", "Fleet Lead"),
+    "saskia-de-wit": ("Saskia de Wit", "People Lead"),
+    "ken-ito": ("Ken Ito", "CTO"),
+    "lea-novak": ("Lea Novak", "BizOps Lead"),
+    "ruth-mensah": ("Ruth Mensah", "Customer Success Lead"),
 }
 
 # slug: (title, owner, stakeholders)
@@ -213,9 +213,8 @@ def main():
     if ROOT.exists():
         shutil.rmtree(ROOT)
 
-    for slug, role in PEOPLE.items():
-        name = slug.replace("-", " ").title()
-        write("Person", slug, ["type: Person", f"name: {slug}", f'role: "{role}"'],
+    for slug, (name, role) in PEOPLE.items():
+        write("Person", slug, ["type: Person", f"name: {slug}", f'title: "{name}"', f'role: "{role}"'],
               f"# {name}\n\n{role} at Kestrel Cargo.")
 
     for slug, (title, owner, stakeholders) in PROJECTS.items():
