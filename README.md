@@ -19,6 +19,25 @@ finds them by following the assumptions people wrote down. It is only as good as
 While a whole log fits in one prompt, a model reading the notes does as well or better. See
 [Where this loses](#where-this-loses).
 
+A budget cut is the shape of that walk. The signal never has to mention a hub, a hiring plan, or a person:
+
+```mermaid
+flowchart LR
+  sig["Finance cuts the Q1 budget by 20%"] -->|BREAKS| a["Q1 budget stays at plan"]
+  a -->|critical| h["Hire 25 drivers in Q1"]
+  a -->|critical| l["Hire the Lyon city lead in December"]
+  a -->|critical| hub["Open the Rotterdam South hub in Q1"]
+  a -->|supporting| f["Freeze hiring outside Operations"]
+  a -->|supporting| b["Lease half the e-cargo bikes, buy half"]
+  h --> dh["driver-hiring-q1"]
+  l --> ll["lyon-launch"]
+  hub --> sh["hub-2-rotterdam-south"]
+  f --> ep["enterprise-pricing"]
+  b --> fl["fleet-ebike-upgrade"]
+```
+
+The tell list starts with **Olu Adeyemi** (Head of Operations) and **Priya Raman** (Head of Finance), 3 critical decisions each.
+
 ## How it uses Relate
 
 - **Mode: directory.** The store is `vault/`, a folder of markdown notes read by Relate's
@@ -59,39 +78,124 @@ BREAKS:
 
 ## Setup and run
 
-You need the Relate CLI (tested on v1.1.0) and Python 3 (tested on 3.14). No Python packages.
+You need the Relate CLI (v1.1.0) and Python 3.12 or newer. The tests run on 3.12. No packages to install.
 
 ```bash
 curl -sSfL https://relatedb.ai/install.sh | bash
-relate --version
+```
 
+The installer puts `relate` in `~/.local/bin`. If the shell says `relate: command not found`, add that directory to `PATH` and open a new terminal:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+relate --version
+```
+
+The first time Relate runs, it prints: `relate collects anonymous usage metrics; disable anytime: relate telemetry off`. That line is about Relate's usage metrics. Turn them off and save the choice:
+
+```bash
+relate telemetry off
+```
+
+`relate telemetry status` prints whether they are on. For one shell, without saving a choice, `export RELATE_TELEMETRY=0` or `export DO_NOT_TRACK=1` turns them off.
+
+```bash
 git clone https://github.com/charlottebepbop/decision-ripple.git
 cd decision-ripple
+./scripts/demo.sh
 ```
 
-**1. Ask the graph.** First build the full-text index once. It maps note bodies to the `text`
-property and indexes decision titles and bodies:
+`./scripts/demo.sh` is the whole story on a throwaway copy of the vault. It builds the index, prints the assumptions that are already broken, records one memo that hits two of them, replaces the Rotterdam South hub decision twice, and searches for why the mapping contract changed. The committed notes stay as they are. `examples/demo-script.md` is the shot list for filming that run.
+
+Run the commands below from the repo root. They read `DECISION_VAULT` when it is set, and the sample `vault/` when it is not. Set that variable before you record anything of your own. See [Start your own vault](#start-your-own-vault).
+
+**1. Ask the graph.** Build the full-text index once. It maps note bodies to the `text` property and indexes decision titles and bodies. `5-why` needs this index (`IndexDoesNotExist: decision_text` means it has not been built yet):
 
 ```bash
-cd vault
-relate query --snapshot-format markdown --markdown-body-properties text --database . \
-  < ../queries/0-setup.cypher
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --max-rows 0 \
+  < queries/0-setup.cypher
 ```
 
-Then run any of the five queries in `queries/`:
+Queries and `scripts/add_signal.py` take a **slug**, the filename without `.md`, not the title. `ops-data-complete` is the slug. "Delivery scans cover at least 95% of trips." is the statement. List them:
 
 ```bash
-relate query --snapshot-format markdown --database . --mode table \
-  --param assumption=q1-budget-holds < ../queries/1-ripple.cypher
+python3 scripts/list_slugs.py
+python3 scripts/list_slugs.py assumption
+python3 scripts/list_slugs.py project decision person
 ```
+
+`--param` parses its value as JSON first, and a bare word is a string, so `--param assumption=ops-data-complete` is the form to paste. A phrase for `5-why` is a JSON string: `--param term='"annual mapping"'`. Queries 1, 3, 4, and 5 stop with `ParameterMissing` until that flag is present. Queries 2 and 6 take no parameter.
 
 | Query | Question | Parameter |
 |---|---|---|
 | `1-ripple.cypher` | This assumption broke. Which live decisions rest on it, which projects do they steer, who must hear? | `assumption` |
-| `2-fragile.cypher` | Which projects stand on 2 or more low-confidence decisions, and is any of the ground already hit? | none |
-| `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what is under pressure? | `project` |
+| `2-fragile.cypher` | Which projects stand on 2 or more low-confidence decisions, or on a high-confidence decision whose assumption has broken? | none |
+| `3-precheck.cypher` | Before working on a project: what binds it, what replaced old decisions, what amended them and what that amendment rests on, what is under pressure? | `project` |
 | `4-tell.cypher` | The ripple, turned around per person, most exposed first | `assumption` |
 | `5-why.cypher` | Why did we decide this? Full-text `SEARCH` over decision notes, then who decided, what it rests on, what replaced it | `term` |
+| `6-exposed.cypher` | Which live decisions still rest on an assumption a signal has weakened, broken, supported, or confirmed? Supports and confirmations are labelled and are not risk. | none |
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  --param assumption=ops-data-complete \
+  < queries/1-ripple.cypher
+```
+
+On the sample vault: four live decisions, three of them critical (the ops dashboard, the route optimizer, and training the optimizer on scan data).
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  < queries/2-fragile.cypher
+```
+
+On the sample vault: `route-optimizer-v2` (3 low-confidence decisions), `customer-sla-program` (2), and `ops-dashboard` (2). The high-confidence count on each of those rows is 0. **Launch Lyon before Paris** and **Paris waits for 3 months of Lyon data** are high confidence and both rest on the Lyon permit. A signal that breaks that permit puts `lyon-launch` on this list and counts those two. **Put the Lyon depot in Guillotiere** is medium confidence, so the count stays with those two. Only a `BREAKS` signal adds the project.
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  --param project=hub-2-rotterdam-south \
+  < queries/3-precheck.cypher
+```
+
+On the sample vault: the Q1 hub opening, the runway plan, and staffing the south hub from the north hub, all still live. None of them has been amended.
+
+On `enterprise-pricing` the EUR 1,800 price stays live. The pre-check names the amendment, **The enterprise tier includes the SLA**, and what that amendment rests on: `sla-penalties-capped` (critical) and `enterprise-demand-3-pilots` (supporting). The walk matches `SUPERSEDES`: up to five hops, and only a decision that is still live.
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  --param assumption=q1-budget-holds \
+  < queries/4-tell.cypher
+```
+
+On the sample vault: eight people, **olu-adeyemi** and **priya-raman** first, with 3 critical decisions each.
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  --param term=mapping \
+  < queries/5-why.cypher
+```
+
+A phrase uses JSON quotes. On the sample vault both forms find the annual mapping contract, the monthly contract that replaced it, and the in-house optimizer:
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  --param term='"annual mapping"' \
+  < queries/5-why.cypher
+```
+
+```bash
+relate query --snapshot-format markdown --markdown-body-properties text \
+  --database "${DECISION_VAULT:-vault}" --mode table --max-rows 0 \
+  < queries/6-exposed.cypher
+```
+
+On the sample vault: scan coverage breaks four live decisions, and the supplier slip weakens the bike lease. Both are labelled `risk`. The October churn report confirms driver churn. That row is labelled `confirmation`, not risk. It names three live decisions: **Pay a 3-month retention bonus to drivers**, **Staff the south hub with drivers from the north hub**, and **Promise 98% on-time delivery in the SLA**. A support on an assumption that is also broken is labelled `support` and sits on the same assumption. Risk rows come first.
 
 **2. Record a new signal.** From the repo root:
 
@@ -99,11 +203,22 @@ relate query --snapshot-format markdown --database . --mode table \
 python3 scripts/add_signal.py q1-budget-holds BREAKS "Finance cuts the Q1 budget by 20%" --source "Board memo"
 ```
 
-This writes `vault/Signal/<date>-finance-cuts-the-q1-budget-by-20.md` and a brief in
-`briefs/`: 5 live decisions at risk (3 critical) and 8 people to tell, most exposed first.
-`examples/briefs/` holds three briefs made this way on a fresh clone, so you can read the
+This writes `Signal/<date>-finance-cuts-the-q1-budget-by-20.md` in `DECISION_VAULT` (or in `vault/` when that is unset) and a brief in `DECISION_BRIEFS` (or in `briefs/`): 5 live decisions at risk (3 critical) and 8 people to tell, most exposed first.
+
+The filename is the date, a hyphen, and a slug of the title. The slug is lower case, punctuation becomes hyphens, and it is cut at 60 characters. A hyphen left on the end of that cut is dropped. `name` inside the file is that filename without `.md`. Pass the slug `python3 scripts/list_slugs.py` prints. `q1-budget-holds` is a slug. "The Q1 budget stays at plan, EUR 2.4m." is the statement.
+
+Repeat `--and ASSUMPTION EFFECT` when one memo hits another assumption. One signal note gets
+both edges, and the brief has a section per assumption and one tell list:
+
+```bash
+python3 scripts/add_signal.py q1-budget-holds BREAKS \
+  "Finance cuts the Q1 budget and the bike supplier slips" \
+  --and ebike-supplier-delivers-feb WEAKENS --source "Board memo"
+```
+
+`examples/briefs/` holds four briefs made this way on a fresh clone, so you can read the
 output without running anything.
-Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`.
+Effects are `BREAKS`, `WEAKENS`, `SUPPORTS` (evidence, not proof) and `CONFIRMS`. A `SUPPORTS` or `CONFIRMS` brief names the live decisions that rest on the assumption and labels them support or confirmation, not a risk. It still says that no live decision needs a second look, and it does not open a tell list. `6-exposed` shows the same signal, with that label.
 
 **3. Record the decision that follows.** The hub's Q1 opening lost its budget, so it moves to Q2:
 
@@ -114,13 +229,38 @@ python3 scripts/add_decision.py "Open the Rotterdam South hub in Q2" \
   --supersedes 2026-07-29-open-south-hub-q1 --rationale "The Q1 budget was cut by 20%."
 ```
 
-This writes a new note in `vault/Decision/`, links it with `SUPERSEDES`, and sets the Q1
-decision to `superseded`. The pre-check it prints now points from Q1 to Q2. Use `--amends`
-for a change that keeps the old decision live.
+This writes a new note in `Decision/`, links it with `SUPERSEDES`, and sets the Q1
+decision to `superseded`. The pre-check it prints now points from Q1 to Q2. A later decision
+that supersedes Q2 is what the pre-check names for both: it walks `SUPERSEDES` (up to five
+hops) and keeps the decision whose status is still `live`. Use `--amends`
+for a change that keeps the old decision live. The pre-check walks `AMENDS` the same way,
+up to five hops, and names the live amending decision and what it rests on. The amended
+decision stays live. The printed line says `amended by` and `amendment rests on`. It does
+not say `replaced by`.
 
-**4. Let an agent use it.** `.mcp.json` runs `scripts/serve.sh`. It builds the full-text index,
-then starts Relate's MCP server on the vault, read-only and live. It offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent to run
-the pre-check before it plans work on a project. With Claude Code:
+`--context`, `--option` (once per option), and `--who-decided` are stored in the note under those headings. Without them the note is still the title and the rationale. `--dry-run` prints the note and writes nothing.
+
+**Draft it in Claude Code instead of writing the note by hand.** A full note takes several minutes to compose, and a mistyped link makes Relate create an empty note that looks connected. `/log-decision` and `/log-signal` (the files in `.claude/commands/`) draft from the conversation, or from a memo you paste after the command. They run `python3 scripts/list_slugs.py` and link only to slugs that list prints. A person or an assumption that is not in the list is shown as new and created only after you say yes, with `--new-person` or `--new-assumption`. The commands then run the scripts above, run `python3 scripts/check_vault.py`, and print any problem. `/log-signal` prints the brief. If that memo also states a decision, it suggests `/log-decision` and leaves that decision unwritten.
+
+```bash
+python3 scripts/add_decision.py "Open the Rotterdam South hub in Q2" \
+  --date 2026-12-01 \
+  --project hub-2-rotterdam-south --by olu-adeyemi --by tomasz-wilk \
+  --rests-on south-hub-lease-signed:critical --rests-on series-a-close-march \
+  --rests-on q2-fit-out-fits \
+  --new-assumption q2-fit-out-fits "The Q2 fit-out fits the revised budget." \
+  --supersedes 2026-07-29-open-south-hub-q1 \
+  --rationale "The Q1 budget was cut by 20%." \
+  --context "The north hub still runs at 92% capacity." \
+  --option "Open in Q2." \
+  --option "Cancel the hub. Lost because the north hub stays full." \
+  --who-decided "Olu Adeyemi and Tomasz Wilk decided." \
+  --dry-run
+```
+
+Drop `--dry-run` only when the printed note is the one you want. Set `DECISION_VAULT` first when this is not the Kestrel sample.
+
+**4. Let an agent use it.** `.mcp.json` runs `scripts/serve.sh`. The script builds the full-text index, then starts Relate's MCP server, read-only and live. With `DECISION_VAULT` set, the server reads that folder. With the variable unset, the server reads the sample `vault/`. The server offers two tools: `read_cypher` and `get_schema`. `CLAUDE.md` tells the agent which query to run, and to use slugs. With Claude Code:
 
 ```bash
 claude
@@ -128,10 +268,12 @@ claude
 > Why did we drop the annual mapping contract?
 ```
 
-The agent finds the 3 decisions that steer the hub. It then follows shared assumptions to
+`/weekly` (`.claude/commands/weekly.md`) runs `scripts/weekly.py` and prints the briefing for the week. The agent runs `6-exposed` before it plans. On a fresh clone that is the scan-coverage break
+under the route optimizer and the ops dashboard, the supplier slip under the bike lease, and the October churn confirmation, labelled confirmation rather than a risk.
+It finds the 3 decisions that steer the hub, then follows shared assumptions to
 decisions that never name the hub: driver hiring, the hiring freeze, and a bike lease whose
 supplier has flagged a slip. Run step 2, ask again, and the budget break shows up. Run step 3,
-ask again, and the agent plans on the Q2 decision.
+ask again, and the agent plans on the decision the pre-check still marks live.
 
 **Reset** to the committed vault at any time:
 
@@ -139,8 +281,85 @@ ask again, and the agent plans on the Q2 decision.
 git checkout -- vault && git clean -fdq vault
 ```
 
-`python3 scripts/seed_vault.py` rebuilds the notes from code. Relate rewrites them into its own
-field order on first open, so expect a one-time diff.
+`python3 scripts/seed_vault.py` deletes `vault/` and writes the sample notes again. It leaves a `DECISION_VAULT` folder alone. Opening the vault leaves the notes as they are. Relate keeps its index in `vault/.cypherlite/`, and that folder is gitignored, so the first query does not change the files git tracks.
+
+## Weekly briefing
+
+`python3 scripts/weekly.py` prints a short briefing and writes `weekly-<date>.md` to `DECISION_BRIEFS` (or to `briefs/` when that is unset). It reads `DECISION_VAULT` the same way the queries do. It does not change the notes.
+
+The window is the 7 days before today, through today. `--as-of YYYY-MM-DD` sets the last day, which matters when you want a past week. `--since YYYY-MM-DD` sets the first day. Both days are included. `--review-after 90` is how long an assumption can go without a signal before it is worth a review. Assumptions have no review date. The latest signal is the review, and a signal dated after `--as-of` does not count.
+
+```bash
+python3 scripts/weekly.py --since 2026-12-05 --as-of 2026-12-12
+```
+
+Five sections:
+
+- What broke or weakened in the window.
+- The live decisions now at risk, grouped by the assumption that was hit, critical first. A high-confidence decision is included. A superseded decision is not.
+- Who to tell, most exposed first. A decision that is critical under two assumptions hit in the window counts once.
+- What was confirmed or supported. When that assumption was also broken or weakened, the break is on the same line, including a break from before the window.
+- Assumptions with no signal in the review window, under Worth a review.
+
+In Claude Code, `/weekly` runs the same script. Words after the command become `--since`, `--as-of`, or `--review-after`.
+
+The briefing is the weekly read. It uses `queries/7-window.cypher` through `queries/11-evidence.cypher`. `6-exposed` has no date window. It lists every break and weaken, and also every support and confirmation, labelled `support` or `confirmation` so they are not read as risk. `2-fragile` counts low-confidence decisions, and also high-confidence decisions whose assumption a signal has broken. `3-precheck` follows `SUPERSEDES` and `AMENDS`.
+
+## Start your own vault
+
+`vault/` is the Kestrel Cargo sample, and it is committed. `add_signal.py` and `add_decision.py` write there until you point them at a folder of your own. Create one outside the repo:
+
+```bash
+python3 scripts/init_vault.py "$HOME/notes/my-decisions"
+export DECISION_VAULT="$HOME/notes/my-decisions"
+export DECISION_BRIEFS="$HOME/notes/my-decisions-briefs"
+```
+
+`DECISION_VAULT` is the notes folder. The queries above, `list_slugs.py`, `add_signal.py`, `add_decision.py`, `weekly.py`, `check_vault.py`, and `scripts/serve.sh` all use it. `DECISION_BRIEFS` is where a signal's "who to tell" brief is written, and where `weekly.py` writes `weekly-<date>.md`. Leave it unset and the brief lands in this repo's `briefs/` folder.
+
+Then add notes in this order, so every link has a file to point at:
+
+1. A person (`templates/Person.md`).
+2. A project they own (`templates/Project.md`).
+3. An assumption (`templates/Assumption.md`).
+4. A decision with `status: live` that rests on the assumption (`templates/Decision.md`). Keep one `RESTS_ON` link as a bare wikilink. The weight form (`weight: critical`) needs at least one bare `RESTS_ON` somewhere in the vault, or Relate refuses to open it.
+5. `python3 scripts/check_vault.py`
+6. The index command from step 1, then the same six queries. `${DECISION_VAULT:-vault}` is already your folder.
+
+Open the folder in Obsidian and turn on the Templates core plugin. `init_vault.py` copies the templates to `.obsidian/templates`. Relate ignores a folder whose name starts with a dot, so that copy stays out of the graph. The rules for each note type are in the template and in `templates/README.md`: `name` matches the filename, decisions need `status: live`, critical and supporting `RESTS_ON` are written differently, and links are quoted `"[[Assumption/slug]]"`.
+
+To point Claude Code at the same folder, set `DECISION_VAULT` in `.mcp.json` to the absolute path. Without this entry the assistant reads the sample:
+
+```json
+{
+  "mcpServers": {
+    "kestrel-decisions": {
+      "command": "sh",
+      "args": ["scripts/serve.sh"],
+      "env": {
+        "DECISION_VAULT": "/home/you/notes/my-decisions"
+      }
+    }
+  }
+}
+```
+
+A `DECISION_VAULT` already exported in the environment that launches Claude Code reaches `serve.sh` as well. Keep other markdown out of the notes folder. A `.md` file becomes a note, and the folder it sits in becomes its label.
+
+## Tests and the vault check
+
+Python 3.12 or newer, from the standard library. No packages to install. The scenario tests need the Relate CLI (v1.1.0). The vault check does not.
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/check_vault.py
+```
+
+The scenario tests copy `vault/` and set `DECISION_VAULT`, so the committed notes stay as they are. Each one says which decisions, people, and projects a signal should flag, and which it should leave alone. `tests/test_weekly.py` does the same for the briefing: the date window, a high-confidence break, a support shown next to a break, a decision counted once when it is critical under two assumptions, and assumptions with no recent signal.
+
+`scripts/check_vault.py` reads the notes as files. Run it after you edit a note by hand. It exits with an error when a link is broken, mistyped, or would be dropped, when a link would make Relate create an empty note, when a note only has type and name, when a header field is missing or malformed (including a decision with no `status`, which then disappears from the ripple), when `name` does not match the filename (Relate then refuses every query), when a person or a note is duplicated, when no decision rests on an assumption, or when a decision rests on no assumption. The message says what to change. With no argument it checks `DECISION_VAULT` when that is set, and `vault/` otherwise. Pass a folder to check that folder instead.
+
+`scripts/add_signal.py` refuses an empty assumption (the note Relate creates from a mistyped link) and names the closest real one.
 
 ## Where the data lives
 
@@ -179,8 +398,9 @@ Found while building, all on v1.1.0:
 
 - The map form for relationship properties needs at least one bare wikilink of that type
   somewhere in the vault. So supporting `RESTS_ON` links are bare, and only critical ones carry
-  `weight`.
+  `weight`. A vault whose every `RESTS_ON` uses the weight form fails to open.
+- `scripts/add_signal.py` and `scripts/add_decision.py` build the filename slug with `scripts/graph.py`. The slug is cut at 60 characters, and a hyphen left at the cut is removed. `name` is that filename without `.md`.
 - The Python client has no markdown snapshot option, so the scripts in `scripts/` use the CLI.
-- `--param` parses its value as JSON first. `scripts/graph.py` JSON-quotes every value so a date stays
-  a string.
-- `relate serve` does not take `--markdown-body-properties`.
+- `--param` parses its value as JSON first. A bare word such as `ops-data-complete` is a string. `scripts/graph.py` JSON-quotes every value so a date stays a string.
+- `relate serve` does not take `--markdown-body-properties`. `scripts/serve.sh` runs the index query first, which records that note bodies map to `text`.
+- Relate collects anonymous usage metrics on first run. `relate telemetry off` saves the off switch. `RELATE_TELEMETRY=0` and `DO_NOT_TRACK=1` turn them off for one shell.
