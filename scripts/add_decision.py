@@ -338,9 +338,15 @@ def main():
 def render_plan(name, title, args, rests, new_assumptions, new_people, body):
     new_assumption_slugs = {item for item, _statement in new_assumptions}
     new_person_slugs = {item for item, _display, _role in new_people}
+    new_names = {item: display for item, display, _role in new_people}
+    titles = {r["n"]: r["t"] for r in cypher(
+        "MATCH (p:Person) WHERE p.name IN $by RETURN p.name AS n, p.title AS t", by=list(args.by))}
     decided = []
     for person in args.by:
-        decided.append(f"{person} (new)" if person in new_person_slugs else person)
+        if person in new_person_slugs:
+            decided.append(f"{new_names[person]} ({person}, new)")
+        else:
+            decided.append(titles.get(person) or person)
     lines = [
         f"Vault: {VAULT}",
         "Dry run. Nothing written.",
